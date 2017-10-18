@@ -1,5 +1,6 @@
 package nachos.threads;
 
+import java.util.TreeMap;
 import nachos.machine.*;
 
 /**
@@ -14,10 +15,12 @@ public class Alarm {
      * <p><b>Note</b>: Nachos will not function correctly with more than one
      * alarm.
      */
+    private TreeMap<Long, KThread> waitingThread;
     public Alarm() {
-	Machine.timer().setInterruptHandler(new Runnable() {
-		public void run() { timerInterrupt(); }
-	    });
+        waitingThread = new TreeMap<Long, KThread>();
+        Machine.timer().setInterruptHandler(new Runnable() {
+                public void run() { timerInterrupt(); }
+            });
     }
 
     /**
@@ -27,7 +30,19 @@ public class Alarm {
      * that should be run.
      */
     public void timerInterrupt() {
-	KThread.currentThread().yield();
+        boolean intStatus = Machine.interrupt().disable();
+        
+        long current = Machine.timer().getTime();
+        // check the key
+        // it requests at least x time so this counts
+        // if firstKey() as the waketime is up then get ready
+        while (!waitingThread.isEmpty() && waitingThread.firstKey() <= current)
+            waitingThread.pollFirstEntry().getValue().ready();
+        // Removes and returns a key-value mapping associated with the least key in this map, or null if the map is empty.
+        Machine.interrupt().restore(intStatus);
+
+        // Preempt current thread as normal
+        KThread.yield();
     }
 
     /**
@@ -45,9 +60,14 @@ public class Alarm {
      * @see	nachos.machine.Timer#getTime()
      */
     public void waitUntil(long x) {
-	// for now, cheat just to get something working (busy waiting is bad)
-	long wakeTime = Machine.timer().getTime() + x;
-	while (wakeTime > Machine.timer().getTime())
-	    KThread.yield();
+        // for now, cheat just to get something working (busy waiting is bad)
+        boolean intStatus = Machine.interrupt().disable();
+        long wakeTime = Machine.timer().getTime() + x;
+        // Place current thread on a wait queue and put it to sleep
+        waitingThread.put(wakeTime, KThread.currentThread());
+        KThread.sleep();
+        Machine.interrupt().restore(intStatus);
     }
+    
+
 }

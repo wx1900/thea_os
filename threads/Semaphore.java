@@ -28,24 +28,25 @@ public class Semaphore {
      * @param	initialValue	the initial value of this semaphore.
      */
     public Semaphore(int initialValue) {
-	value = initialValue;
+		value = initialValue;
     }
 
     /**
      * Atomically wait for this semaphore to become non-zero and decrement it.
      */
     public void P() {
-	boolean intStatus = Machine.interrupt().disable();
+		boolean intStatus = Machine.interrupt().disable();
 
-	if (value == 0) {
-	    waitQueue.waitForAccess(KThread.currentThread());
-	    KThread.sleep();
-	}
-	else {
-	    value--;
-	}
+		if (value == 0) {
+			waitQueue.waitForAccess(KThread.currentThread());
+			KThread.sleep();
+			System.out.println("thread -" + KThread.currentThread().getName() +" sleep P " + this.getSName());
+		}
+		else {
+			value--;
+		}
 
-	Machine.interrupt().restore(intStatus);
+		Machine.interrupt().restore(intStatus);
     }
 
     /**
@@ -53,52 +54,67 @@ public class Semaphore {
      * sleeping on this semaphore.
      */
     public void V() {
-	boolean intStatus = Machine.interrupt().disable();
+		boolean intStatus = Machine.interrupt().disable();
 
-	KThread thread = waitQueue.nextThread();
-	if (thread != null) {
-	    thread.ready();
-	}
-	else {
-	    value++;
-	}
-	
-	Machine.interrupt().restore(intStatus);
+		KThread thread = waitQueue.nextThread();
+		if (thread != null) {
+			thread.ready();
+			System.out.println("thread -" + thread.getName() + " ready V " + this.getSName());
+		}
+		else {
+			value++;
+		}
+		
+		Machine.interrupt().restore(intStatus);
     }
 
     private static class PingTest implements Runnable {
-	PingTest(Semaphore ping, Semaphore pong) {
-	    this.ping = ping;
-	    this.pong = pong;
-	}
-	
-	public void run() {
-	    for (int i=0; i<10; i++) {
-		ping.P();
-		pong.V();
-	    }
-	}
+		PingTest(Semaphore ping, Semaphore pong) {
+			this.ping = ping; this.ping.setSName("ping");
+			this.pong = pong; this.pong.setSName("pong");
+		}
 
-	private Semaphore ping;
-	private Semaphore pong;
+		// ping ready
+		// ping sleep
+		public void run() {
+			for (int i=0; i<10; i++) {
+				ping.P();
+				pong.V();
+			}
+		}
+
+		private Semaphore ping;
+		private Semaphore pong;
     }
 
     /**
      * Test if this module is working.
      */
     public static void selfTest() {
-	Semaphore ping = new Semaphore(0);
-	Semaphore pong = new Semaphore(0);
+		System.out.println("Semaphore - selfTest - begins.");
+		Semaphore ping = new Semaphore(0);
+		Semaphore pong = new Semaphore(0);
 
-	new KThread(new PingTest(ping, pong)).setName("ping").fork();
+		new KThread(new PingTest(ping, pong)).setName("ping").fork();
+		
+		// main ready 
+		// main sleep
+		for (int i=0; i<10; i++) {
+			ping.V();
+			pong.P();
+		}
 
-	for (int i=0; i<10; i++) {
-	    ping.V();
-	    pong.P();
-	}
+		System.out.println("Semaphore - selfTest - finished.");
     }
 
+	String getSName () {
+		return this.name;
+	}
+	void setSName (String name) {
+		this.name = name;
+	}
     private int value;
-    private ThreadQueue waitQueue =
-	ThreadedKernel.scheduler.newThreadQueue(false);
+    private ThreadQueue waitQueue =	ThreadedKernel.scheduler.newThreadQueue(false);
+	private String name;
+	
 }

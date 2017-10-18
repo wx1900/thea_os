@@ -269,14 +269,14 @@ public final class TCB {
      * this TCB and return.
      */
     private void yield() {
-	waitForInterrupt();
-	
-	if (done) {
-	    currentTCB.interrupt();
-	    throw new ThreadDeath();
-	}
+		waitForInterrupt();
+		
+		if (done) {
+			currentTCB.interrupt();
+			throw new ThreadDeath();
+		}
 
-	currentTCB = this;
+		currentTCB = this;
     }
 
     /**
@@ -288,10 +288,10 @@ public final class TCB {
      * is updated by <tt>contextSwitch()</tt> before we get called.
      */
     private synchronized void waitForInterrupt() {
-	while (!running) {
-	    try { wait(); }
-	    catch (InterruptedException e) { }
-	}
+		while (!running) {
+			try { wait(); }
+			catch (InterruptedException e) { }
+		}
     }
 
     /**
@@ -301,29 +301,29 @@ public final class TCB {
      * TCB.
      */
     private synchronized void interrupt() {
-	running = true;
-	notify();
+		running = true;
+		notify();
     }
 
     private void associateThread(KThread thread) {
-	// make sure AutoGrader.runningThread() gets called only once per
-	// context switch
-	Lib.assertTrue(!associated);
-	associated = true;
+		// make sure AutoGrader.runningThread() gets called only once per
+		// context switch
+		Lib.assertTrue(!associated);
+		associated = true;
 
-	Lib.assertTrue(thread != null);
+		Lib.assertTrue(thread != null);
 
-	if (nachosThread != null)
-	    Lib.assertTrue(thread == nachosThread);
-	else
-	    nachosThread = thread;
+		if (nachosThread != null)
+			Lib.assertTrue(thread == nachosThread);
+		else
+			nachosThread = thread;
     }
 
     private static void authorizeDestroy(KThread thread) {
-	// make sure AutoGrader.finishingThread() gets called only once per
-	// destroy
-	Lib.assertTrue(toBeDestroyed == null);
-	toBeDestroyed = thread;
+		// make sure AutoGrader.finishingThread() gets called only once per
+		// destroy
+		Lib.assertTrue(toBeDestroyed == null);
+		toBeDestroyed = thread;
     }
 
     /**
@@ -403,12 +403,12 @@ public final class TCB {
     private Runnable tcbTarget;
 
     private static class TCBPrivilege implements Privilege.TCBPrivilege {
-	public void associateThread(KThread thread) {
-	    Lib.assertTrue(currentTCB != null);
-	    currentTCB.associateThread(thread);
-	}
-	public void authorizeDestroy(KThread thread) {
-	    TCB.authorizeDestroy(thread);
-	}
+		public void associateThread(KThread thread) {
+			Lib.assertTrue(currentTCB != null);
+			currentTCB.associateThread(thread);
+		}
+		public void authorizeDestroy(KThread thread) {
+			TCB.authorizeDestroy(thread);
+		}
     }
 }

@@ -10,7 +10,7 @@ public class ThreadedKernel extends Kernel {
      * Allocate a new multi-threaded kernel.
      */
     public ThreadedKernel() {
-	super();
+	    super();
     }
 
     /**
@@ -18,25 +18,25 @@ public class ThreadedKernel extends Kernel {
      * alarm, and enables interrupts. Creates a file system if necessary.   
      */
     public void initialize(String[] args) {
-	// set scheduler
-	String schedulerName = Config.getString("ThreadedKernel.scheduler");
-	scheduler = (Scheduler) Lib.constructObject(schedulerName);
+        // set scheduler
+        String schedulerName = Config.getString("ThreadedKernel.scheduler");
+        scheduler = (Scheduler) Lib.constructObject(schedulerName);
 
-	// set fileSystem
-	String fileSystemName = Config.getString("ThreadedKernel.fileSystem");
-	if (fileSystemName != null)
-	    fileSystem = (FileSystem) Lib.constructObject(fileSystemName);
-	else if (Machine.stubFileSystem() != null)
-	    fileSystem = Machine.stubFileSystem();
-	else
-	    fileSystem = null;
+        // set fileSystem
+        String fileSystemName = Config.getString("ThreadedKernel.fileSystem");
+        if (fileSystemName != null)
+            fileSystem = (FileSystem) Lib.constructObject(fileSystemName);
+        else if (Machine.stubFileSystem() != null)
+            fileSystem = Machine.stubFileSystem();
+        else
+            fileSystem = null;
 
-	// start threading
-	new KThread(null);
+        // start threading
+        new KThread(null);
 
-	alarm  = new Alarm();
+        alarm  = new Alarm();
 
-	Machine.interrupt().enable();
+        Machine.interrupt().enable();
     }
 
     /**
@@ -46,14 +46,28 @@ public class ThreadedKernel extends Kernel {
      * tests here.
      */	
     public void selfTest() {
-	KThread.selfTest();
-	Semaphore.selfTest();
-	SynchList.selfTest();
-	if (Machine.bank() != null) {
-	    ElevatorBank.selfTest();
-	}
+        KThread.selfTest();
+        Semaphore.selfTest();
+        SynchList.selfTest();
+        Condition2.selfTest(); /**task 2 condition2*/
+        /**task 3 alarm*/
+        /*
+        alarmTest(10000);
+        alarmTest(100);
+        alarmTest(1);
+        alarmTest(500);
+        */
+        /**task 4 communicator*/
+        Communicator.selfTest();
+        if (Machine.bank() != null) {
+            ElevatorBank.selfTest();
+        }
     }
-    
+    public void alarmTest(long x) {
+        System.out.println("alarmTest-begin-"+Machine.timer().getTime()+" - test for - "+x);
+        alarm.waitUntil(x);
+        System.out.println("alarmTest-finished-"+Machine.timer().getTime());
+    }
     /**
      * A threaded kernel does not run user programs, so this method does
      * nothing.
@@ -65,7 +79,7 @@ public class ThreadedKernel extends Kernel {
      * Terminate this kernel. Never returns.
      */
     public void terminate() {
-	Machine.halt();
+	    Machine.halt();
     }
 
     /** Globally accessible reference to the scheduler. */

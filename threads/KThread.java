@@ -151,7 +151,7 @@ public class KThread {
             });
 
         ready();
-        
+        // 放入就绪队列
         Machine.interrupt().restore(intStatus);
     }
 
@@ -183,11 +183,7 @@ public class KThread {
      */
     public static void finish() {
         Lib.debug(dbgThread, "Finishing thread: " + currentThread.toString());
-        
         Machine.interrupt().disable();
-
-        
-
         //for join()
         // 当 currentThread 结束的时候， 它的 joinQueue 里的thread 开始运行 
         ThreadQueue currentJoinQueue = currentThread.joinQueue; 
@@ -202,9 +198,7 @@ public class KThread {
         Machine.autoGrader().finishingCurrentThread();
         Lib.assertTrue(toBeDestroyed == null);
         toBeDestroyed = currentThread;
-
         currentThread.status = statusFinished;
-        
         sleep(); //终止的线程睡眠，等待撤销；同时引起线程调度
     }
 
@@ -285,20 +279,17 @@ public class KThread {
      */
     public void join() {
         Lib.debug(dbgThread, "Joining to thread: " + toString());
-
         Lib.assertTrue(this != currentThread);
-
         boolean intStatus = Machine.interrupt().disable();
         if(this.joinQueue == null) {
-            this.joinqueue = ThreadedKernel.schedular.newThreadQueue(true);
+            this.joinQueue = ThreadedKernel.scheduler.newThreadQueue(false);
             this.joinQueue.acquire(this);
         }
-
         if(currentThread != this && status != statusFinished) {
             this.joinQueue.waitForAccess(currentThread);
             currentThread.sleep();
         }
-        Machine.interrupt().restore(initStatus);
+        Machine.interrupt().restore(intStatus);
     }
 
     /**
@@ -429,6 +420,7 @@ public class KThread {
         // new PingTest(0).run();
 
         testJoin1();
+        // testJoin2(); //failed
     }
 
     public static void testJoin1() {
@@ -438,6 +430,34 @@ public class KThread {
         t.join();
         new PingTest(0).run();
     }
+
+    // public static void testJoin2() {
+    //     Lib.debug(dbgThread, "Enter KThread.selfTest2");
+    //     KThread th1 = new KThread(new PingTest(1).setName("th1"));
+    //     KThread th2 = new KThread(new JoinPingTest(2,th1)).setName("th2");
+
+    //     th2.fork();
+    //     th1.fork();
+    // }
+
+    // private static class JoinPingTest implements Runnable {
+    //     PingTest(int which, KThread thread) {
+    //         this.which = which;
+    //         this.thread = thread;
+    //     }
+    //     public void run() {
+    //         for(int i = 0; i < 5; i++) {
+    //             System.out.println("***thread "+which+" looped "+i+" times");
+    //             thread.join(); //等待线程Thread 结束
+    //             currentThread.yield();
+    //         }
+    //     }
+
+    //     private int which;
+    //     private KThread thread;
+    // }
+
+
     private static final char dbgThread = 't';
 
     /**
