@@ -47,9 +47,9 @@ public class ThreadedKernel extends Kernel {
      */	
     public void selfTest() {
         KThread.selfTest();
-        Semaphore.selfTest();
-        SynchList.selfTest();
-        Condition2.selfTest(); /**task 2 condition2*/
+        // Semaphore.selfTest();
+        // SynchList.selfTest();
+        // Condition2.selfTest(); /**task 2 condition2*/
         /**task 3 alarm*/
         /*
         alarmTest(10000);
@@ -58,7 +58,9 @@ public class ThreadedKernel extends Kernel {
         alarmTest(500);
         */
         /**task 4 communicator*/
-        Communicator.selfTest();
+        // Communicator.selfTest();
+        /**task 5 priorityscheduler */
+        // PriorityScheduler.selfTest();
         if (Machine.bank() != null) {
             ElevatorBank.selfTest();
         }

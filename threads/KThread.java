@@ -421,6 +421,8 @@ public class KThread {
 
         testJoin1();
         // testJoin2(); //failed
+        testYB();
+        testPS();
     }
 
     public static void testJoin1() {
@@ -431,6 +433,41 @@ public class KThread {
         new PingTest(0).run();
     }
 
+    public static void testYB(){
+        KThread a = new KThread(new PingTest(1)).setName("a");
+        KThread b = new KThread(new Runnable(){
+            public void run(){
+                System.out.println("a, yield  once, back to ready queue, run b");
+                a.join();
+                for (int i = 0;i <5;i++){
+                    System.out.println("b"+i+"running");
+                }
+            }
+        });
+        b.fork();
+        a.fork();
+        b.join();
+        new PingTest(0).run();
+    }
+
+    public static void testPS(){
+        boolean intStatus = Machine.interrupt().disable();//关中断，setPriority()函数中要求关中断
+        System.out.println("PriorityScheduler-selftest-begin");
+        KThread t1 = new KThread(new PingTest(1)).setName("t1");
+        KThread t2 = new KThread(new PingTest(2)).setName("t2");
+        KThread t3 = new KThread(new PingTest(3)).setName("t3");
+        new PriorityScheduler().setPriority(t1,2);
+        new PriorityScheduler().setPriority(t2,4);
+        new PriorityScheduler().setPriority(t3,6);
+        t1.fork();
+        t2.fork();
+        t3.fork();
+        new PingTest(0).run();
+        System.out.println("PriorityScheduler-selftest-finished");
+        Machine.interrupt().restore(intStatus);
+    }
+
+// this not working actually
     // public static void testJoin2() {
     //     Lib.debug(dbgThread, "Enter KThread.selfTest2");
     //     KThread th1 = new KThread(new PingTest(1).setName("th1"));
