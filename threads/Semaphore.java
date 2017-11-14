@@ -40,7 +40,7 @@ public class Semaphore {
 		if (value == 0) {
 			waitQueue.waitForAccess(KThread.currentThread());
 			KThread.sleep();
-			System.out.println("thread -" + KThread.currentThread().getName() +" sleep P " + this.getSName());
+			// System.out.println("thread -" + KThread.currentThread().getName() +" sleep P " + this.getSName());
 		}
 		else {
 			value--;
@@ -59,12 +59,12 @@ public class Semaphore {
 		KThread thread = waitQueue.nextThread();
 		if (thread != null) {
 			thread.ready();
-			System.out.println("thread -" + thread.getName() + " ready V " + this.getSName());
+			// System.out.println("thread -" + thread.getName() + " ready V " + this.getSName());
 		}
 		else {
 			value++;
 		}
-		
+
 		Machine.interrupt().restore(intStatus);
     }
 
@@ -96,8 +96,8 @@ public class Semaphore {
 		Semaphore pong = new Semaphore(0);
 
 		new KThread(new PingTest(ping, pong)).setName("ping").fork();
-		
-		// main ready 
+
+		// main ready
 		// main sleep
 		for (int i=0; i<10; i++) {
 			ping.V();
@@ -116,5 +116,5 @@ public class Semaphore {
     private int value;
     private ThreadQueue waitQueue =	ThreadedKernel.scheduler.newThreadQueue(false);
 	private String name;
-	
+
 }

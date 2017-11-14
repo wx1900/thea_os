@@ -466,7 +466,6 @@ public class KThread {
         System.out.println("PriorityScheduler-selftest-finished");
         Machine.interrupt().restore(intStatus);
     }
-
 // this not working actually
     // public static void testJoin2() {
     //     Lib.debug(dbgThread, "Enter KThread.selfTest2");

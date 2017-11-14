@@ -24,7 +24,7 @@ public class Lock {
      * Allocate a new lock. The lock will initially be <i>free</i>.
      */
     public Lock() {
-    }
+    } 
 
     /**
      * Atomically acquire this lock. The current thread must not already hold
@@ -60,7 +60,7 @@ public class Lock {
 
         if ((lockHolder = waitQueue.nextThread()) != null)
             lockHolder.ready();
-        
+
         Machine.interrupt().restore(intStatus);
     }
 
