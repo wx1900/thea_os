@@ -5,6 +5,11 @@ import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Encapsulates the state of a user process that is not contained in its
@@ -19,18 +24,46 @@ import java.io.EOFException;
  * @see	nachos.network.NetProcess
  */
 public class UserProcess {
+    // from github
+    private static final int ROOT = 1;
+    private static int unique = ROOT;
+    private int process_id;
+    private UThread thread;
+    private HashMap<Integer, ChildProcess> map;
+    private ChildProcess myChildProcess;
+    class ChildProcess{
+        UserProcess child;
+        int status;
+        ChildProcess(UserProcess process) {
+            this.child = process;
+            this.status = -999;
+        }
+    }
     /**
      * Allocate a new process.
      */
     public UserProcess() {
+      // from github
+      map = new HashMap<Integer, ChildProcess>();
+
       int numPhysPages = Machine.processor().getNumPhysPages();
       pageTable = new TranslationEntry[numPhysPages];
       for (int i=0; i<numPhysPages; i++)
         pageTable[i] = new TranslationEntry(i,i, true,false,false,false);
-      this.openFiles = new OpenFile[MAX_OPEN_FILES_PER_PROCESS];
-      // set stdin and stdout handlers (0,1)
-      this.openFiles[0] = UserKernel.console.openForReading();
-      this.openFiles[1] = UserKernel.console.openForWriting();
+
+      // from github
+      this.process_id = unique;
+      unique++;
+      openfiles = new HashMap<Integer, OpenFile>();
+      available_descriptors = new ArrayList<Integer>(Arrays.asList(2,3,4,5,6,7,8,9,10,11,12,13,14,15));
+      openfiles.put(0,UserKernel.console.openForReading());
+      openfiles.put(0,UserKernel.console.openForWriting());
+
+      // han
+      //   this.openFiles = new OpenFile[MAX_OPEN_FILES_PER_PROCESS];
+      //   set stdin and stdout handlers (0,1)
+      //   this.openFiles[0] = UserKernel.console.openForReading();
+      //   this.openFiles[1] = UserKernel.console.openForWriting();
       // open file start 3
     }
 
@@ -138,14 +171,38 @@ public class UserProcess {
 
       	byte[] memory = Machine.processor().getMemory();
 
+        // from github
+        int transferred = 0;
+        while(length > 0 && offset < data.length) {
+            int addrOffset = vaddr % 1024;
+            int virtualPage = vaddr / 1024;
+            if(virtualPage >= pageTable.length || virtualPage < 0) {
+                break;
+            }
+            TranslationEntry pte = pageTable[virtualPage];
+            if(!pte.valid) {
+                break;
+            }
+            pte.used = true;
+            int physPage = pte.ppn;
+            int physAddr = physPage * 1024 + addrOffset;
+            int transferLength = Math.min(data.length-offset,Math.min(length,1024-addrOffset));
+            System.arraycopy(memory, physAddr, data, offset, transferLength);
+            vaddr += transferLength;
+            offset += transferLength;
+            length -= transferLength;
+            transferred += transferLength;
+        }
+
+        return transferred;
       	// for now, just assume that virtual addresses equal physical addresses
-      	if (vaddr < 0 || vaddr >= memory.length)
-      	    return 0;
-
-      	int amount = Math.min(length, memory.length-vaddr);
-      	System.arraycopy(memory, vaddr, data, offset, amount);
-
-      	return amount;
+     //  	if (vaddr < 0 || vaddr >= memory.length)
+     //  	    return 0;
+        //
+     //  	int amount = Math.min(length, memory.length-vaddr);
+     //  	System.arraycopy(memory, vaddr, data, offset, amount);
+        //
+     //  	return amount;
     }
 
     /**
@@ -181,14 +238,37 @@ public class UserProcess {
 
       	byte[] memory = Machine.processor().getMemory();
 
+        int transferred = 0;
+        while(length > 0 && offset < data.length) {
+            int addrOffset = vaddr % 1024;
+            int virtualPage = vaddr / 1024;
+            if(virtualPage >= pageTable.length || virtualPage < 0) {
+                break;
+            }
+            TranslationEntry pte = pageTable[virtualPage];
+            if(!pte.valid || pte.readOnly) {
+                break;
+            }
+            pte.used = true;
+            pte.dirty = true;
+            int physPage = pte.ppn;
+            int physAddr = physPage * 1024 + addrOffset;
+            int transferLength = Math.min(data.length-offset, Math.min(length,1024-addrOffset));
+            System.arraycopy(data,offset,memory,physAddr,transferLength);
+            vaddr += transferLength;
+            offset += transferLength;
+            length -= transferLength;
+            transferred += transferLength;
+        }
+        return transferred;
       	// for now, just assume that virtual addresses equal physical addresses
-      	if (vaddr < 0 || vaddr >= memory.length)
-      	    return 0;
-
-      	int amount = Math.min(length, memory.length-vaddr);
-      	System.arraycopy(data, offset, memory, vaddr, amount);
-
-      	return amount;
+     //  	if (vaddr < 0 || vaddr >= memory.length)
+     //  	    return 0;
+        //
+     //  	int amount = Math.min(length, memory.length-vaddr);
+     //  	System.arraycopy(data, offset, memory, vaddr, amount);
+        //
+     //  	return amount;
     }
 
     /**
@@ -293,6 +373,24 @@ public class UserProcess {
       	    return false;
       	}
 
+        // from github
+        pageTable = new TranslationEntry[numPages];
+        for(int i = 0; i < numPages; i++) {
+            int physPage = UserKernel.allocatePage();
+            if(physPage < 0) {
+                Lib.debug(dbgProcess, "\tunable to allocate pages; tried "+ numPages + ", did "+i);
+                for(int j = 0; j < i; j++) {
+                    if(pageTable[j].valid) {
+                        UserKernel.deallocatePage(pageTable[j].ppn);
+                        pageTable[j].valid = false;
+                    }
+                }
+                coff.close();
+                return false;
+            }
+            pageTable[i] = new TranslationEntry(i,physPage,true,false,false,false);
+        }
+
       	// load sections
       	for (int s=0; s<coff.getNumSections(); s++) {
       	    CoffSection section = coff.getSection(s);
@@ -303,18 +401,33 @@ public class UserProcess {
       	    for (int i=0; i<section.getLength(); i++) {
       		int vpn = section.getFirstVPN()+i;
 
-      		// for now, just assume virtual addresses=physical addresses
-      		section.loadPage(i, vpn);
+            // from github
+            int ppn = pageTable[vpn].ppn;
+            section.loadPage(i,ppn);
+            if(section.isReadOnly()){
+                pageTable[vpn].readOnly = true;
+            }
+      	 // for now, just assume virtual addresses=physical addresses
+         //	section.loadPage(i, vpn);
       	    }
       	}
-
-	      return true;
+        // from github
+         coff.close();
+        //
+	     return true;
     }
 
     /**
      * Release any resources allocated by <tt>loadSections()</tt>.
      */
     protected void unloadSections() {
+        // from github
+        for(int i=0; i<pageTable.length;i++) {
+            if(pageTable[i].valid) {
+                UserKernel.deallocatePage(pageTable[i].ppn);
+                pageTable[i].valid = false;
+            }
+        }
     }
 
     /**
@@ -344,19 +457,79 @@ public class UserProcess {
      * Handle the halt() system call.
      */
     private int handleHalt() {
-
+        // from github
+        if(this.process_id != ROOT) {
+            return 0;
+        }
+        //
       	Machine.halt();
 
       	Lib.assertNotReached("Machine.halt() did not halt machine!");
       	return 0;
     }
+    /**
+     *  Hanlde the exec system call
+     */
+    private int handleExec(int file,int argc, int argv) {
+        if(file<0 || argc < 0 || argv <0 ) {
+            return -1;
+        }
+        String fileName = readVirtualMemoryString(file,256);
+        // file not exist
+        if(fileName == null) {
+            return -1;
+        }
 
+        String args[] = new String[argc];
+        int byteReceived, argAddress;
+        byte temp[] = new byte[4];
+        for(int i = 0; i < argc; i++) {
+            byteReceived = readVirtualMemory(argv+i*4, temp);
+            if(byteReceived != 4) {
+                return -1;
+            }
+            argAddress = Lib.bytesToInt(temp,0);
+            args[i] = readVirtualMemoryString(argAddress, 256);
+            if(args[i] == null) {
+                return -1;
+            }
+        }
+        UserProcess child = UserProcess.newUserProcess();
+        ChildProcess newProcessData = new ChildProcess(child);
+        child.myChildProcess = newProcessData;
+        if(child.execute(fileName, args)) {
+            map.put(child.process_id,newProcessData);
+            return child.process_id;
+        }
+        return -1;
+    }
+    /**
+     *  Handle the join() system call
+     */
+     private int handleJoin(int pid, int status){
+         // implement this
+         return 0;
+     }
+     /**
+      *  Handle the exit() system call
+      */
+     private int handleExit(int status){
+          // implement this
+          return 0;
+     }
+     /**
+       *  Handle the unlink() system call
+       */
+     private int handleUnlink(int a0){
+           // implement this
+           return 0;
+     }
     /**
      *  Handle the open() system call
      */
      private int handleOpen(final int pName) {
-         final int fileDescriptor = this.getUnusedFileDescriptor();
-         final String fileName = readVirtualMemoryString(pName, MAX_FILENAME_LENGTH);
+        //  final int fileDescriptor = this.getUnusedFileDescriptor();
+         final String fileName = readVirtualMemoryString(pName, 255);
          if(fileName == null || fileName.length() == 0) {
              System.out.println("Invalid filename for open()");
              return -1;
@@ -367,49 +540,78 @@ public class UserProcess {
              System.out.println("Unable to open file:"+fileName);
              return -1;
          }
+         if(available_descriptors.size() < 1){
+             return -1;
+         }
+         Integer filedescriptor = available_descriptors.remove(0);
          // Add this openfile to openfiles
-         this.openFiles[fileDescriptor] = file;
+         openfiles.put(filedescriptor, file);
          // return the new fileDescriptor
-         return fileDescriptor;
+         return filedescriptor;
      }
      /**
       *  Handle the read() system call
       */
     // a0:filename, a1:buf address, a2:buf size
-     private int handleRead(final int pName, final int buff_addr, final int buff_size) {
+     private int handleRead(final int a0,int buff_addr,int buff_size) {
          // open the file first
-         final int fileDescriptor = this.getUnusedFileDescriptor();
-         final String fileName = readVirtualMemoryString(pName, MAX_FILENAME_LENGTH);
-         if(fileName == null || fileName.length() == 0) {
-             System.out.println("Invalid filename for open()");
-             return -1;
-         }
-         // using StubFileSystem.open() to open this file and the return-type is OpenFile
-         final OpenFile file = ThreadedKernel.fileSystem.open(fileName, false);
+         OpenFile file = openfiles.get(a0);
          if(file == null){
-             System.out.println("Unable to open file:"+fileName);
-             return -1;
+            System.out.println("file doesn't exist");
+            return -1;
          }
-         byte[] file_buff = new byte[MAX_FILE_LENGTH];
-         file.read(pName,file_buff,buff_addr,buff_size); //int pos, byte[] buf, int offset, int length
-         // Add this openfile to openfiles
-        //  this.openFiles[fileDescriptor] = file;
-         // return the new fileDescriptor
-        //  return fileDescriptor;
-        // close after read
-        handleClose(fileDescriptor);
-        return 0;
+         byte[] transfer_buffer = new byte[Processor.pageSize];
+         boolean done = false;
+         int total_transfer = 0;
+         while(!done && buff_size > 0) {
+             int readlen = Math.min(Processor.pageSize, buff_size);
+             int actualread = file.read(transfer_buffer, 0, readlen);
+             if(actualread == -1) return -1;
+             if(actualread < readlen) done = true;
+             int written_bytes = writeVirtualMemory(buff_addr,transfer_buffer,0,actualread);
+             if(written_bytes != actualread) {
+                 return -1;
+             }
+             buff_size -= actualread;
+             buff_addr += actualread;
+             total_transfer += actualread;
+         }
+         return total_transfer;
      }
      /**
       * handleCreate
       */
-     private int handleCreate(final int fileDescriptor) {
+     private int handleCreate(final int a0) {
          // implement this
-         return 0;
+         String filename = this.readVirtualMemoryString(a0,255);
+         if(filename == null) {
+             return -1;
+         }
+         OpenFile file = ThreadedKernel.fileSystem.open(filename, true);
+         if(file == null) {
+             return -1;
+         }
+         if(available_descriptors.size() < 1) {
+             return -1;
+         }
+         Integer filedescriptor = available_descriptors.remove(0);
+         openfiles.put(filedescriptor, file);
+         return filedescriptor;
      }
      /**
       * case syscallClose : return handleClose(a0);
       */
+      private int handleClose(int a0) {
+          OpenFile file = openfiles.get(a0);
+          if(file == null) return -1;
+          file.close();
+          openfiles.remove(a0);
+          available_descriptors.add(a0);
+          return 0;
+
+      }
+
+/*   // from han
      private int handleClose(final int fileDescriptor) {
          if(fileDescriptor <0 || fileDescriptor >= MAX_OPEN_FILES_PER_PROCESS) {
              System.out.println("Invalid file descriptor passed to close()");
@@ -431,6 +633,31 @@ public class UserProcess {
         //  return SUCCESS;
         return 0;
      }
+*/
+    /**
+     *  Handle syscall write()
+     */
+     private int handleWrite (int a0, int buff_addr,int count) {
+         OpenFile file = openfiles.get(a0);
+         if(file == null) return -1;
+         byte[] transfer_buffer = new byte[Processor.pageSize];
+         int total_transfer = 0;
+         while(count > 0) {
+             int readlen = Math.min(Processor.pageSize, count);
+             int actualread = readVirtualMemory(buff_addr, transfer_buffer,0,readlen);
+             if(actualread == -1) return -1;
+             if(actualread < readlen) return -1;
+             int written_bytes = file.write(transfer_buffer,0,actualread);
+             if(written_bytes != actualread) {
+                 return -1;
+             }
+             count -= actualread;
+             buff_addr += actualread;
+             total_transfer += actualread;
+         }
+         return total_transfer;
+     }
+
      private int getUnusedFileDescriptor(){
          // implement this
          return 0;
@@ -478,39 +705,40 @@ public class UserProcess {
      */
     public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
         Lib.debug(dbgProcess, "handleSyscall " + syscall);
-      	switch (syscall) {
+//  a0:filename a1:buf address a2:buf size
+        switch (syscall) {
       	case syscallHalt:
       	     return handleHalt(); // already implement
         case syscallExit:
              System.out.println("syscallExit");
-             return 0;
+             return handleExit(a0);
         case syscallExec:
              System.out.println("syscallExec");
-             return 0;
+             return handleExec(a0,a1,a2);
         case syscallJoin:
              System.out.println("syscallJoin");
-             return 0;
-        case syscallCreate:
+             return handleJoin(a0,a1);
+        case syscallCreate: //proj2.1
              System.out.println("syscallCreate");
              // the file argument is filename, hence a0
              return handleCreate(a0); // create
-        case syscallOpen:
+        case syscallOpen: //proj2.1
              System.out.println("syscallOpen");
              // the file argument is filename, hence a0
              return handleOpen(a0);
-        case syscallRead:
+        case syscallRead: //proj2.1
              System.out.println("syscallRead");
              // need three argument a0:filename, a1:buf address, a2:buf size
              return handleRead(a0,a1,a2);
-        case syscallWrite:
+        case syscallWrite: //proj2.1
              System.out.println("syscallWrite");
-             return 0;
-        case syscallClose:
+             return handleWrite(a0,a1,a2);
+        case syscallClose: //proj2.1
              System.out.println("syscallClose");
-             return 0;
-        case syscallUnlink:
+             return handleClose(a0);
+        case syscallUnlink: //proj2.1
              System.out.println("syscallUnlink");
-             return 0;
+             return handleUnlink(a0);
       	default:
       	    Lib.debug(dbgProcess, "Unknown syscall " + syscall);
       	    Lib.assertNotReached("Unknown system call!");
@@ -565,11 +793,14 @@ public class UserProcess {
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
 
-    //
-    private final OpenFile[] openFiles;
-    private static final int MAX_OPEN_FILES_PER_PROCESS = 10;
-    private static final int MAX_FILENAME_LENGTH = 128;
-    private static final int MAX_FILE_LENGTH = 1024;
+    // from github
+    private HashMap<Integer, OpenFile> openfiles;
+    private List<Integer> available_descriptors;
+    // from hints
+    // private final OpenFile[] openFiles;
+    // private static final int MAX_OPEN_FILES_PER_PROCESS = 10;
+    // private static final int MAX_FILENAME_LENGTH = 128;
+    // private static final int MAX_FILE_LENGTH = 1024;
 
 
 }

@@ -107,6 +107,9 @@ public class UserKernel extends ThreadedKernel {
     public void terminate() {
 	       super.terminate();
     }
+    public static void deallocatePage(int a0){}
+    public static int allocatePage(){return 0;}
+
 
     /** Globally accessible reference to the synchronized console. */
     public static SynchConsole console;

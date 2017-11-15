@@ -1,5 +1,5 @@
 // PART OF THE MACHINE SIMULATION. DO NOT CHANGE.
-
+//
 package nachos.ag;
 
 import nachos.machine.*;
