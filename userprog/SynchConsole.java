@@ -63,7 +63,7 @@ public class SynchConsole {
      * @return	a file that can read this console.
      */
     public OpenFile openForReading() {
-	       return new File(true, false);
+	       return new File(true, false); // file (boolean canRead, boolean canWrite)
     }
 
     private void receiveInterrupt() {

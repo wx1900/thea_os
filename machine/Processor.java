@@ -29,32 +29,32 @@ public final class Processor {
      *				attach.
      */
     public Processor(Privilege privilege, int numPhysPages) {
-	System.out.print(" processor");
+		System.out.print(" processor");
 
-	this.privilege = privilege;
-	privilege.processor = new ProcessorPrivilege();
+		this.privilege = privilege;
+		privilege.processor = new ProcessorPrivilege();
 
-	Class<?> clsKernel = Lib.loadClass(Config.getString("Kernel.kernel"));
-	Class<?> clsVMKernel = Lib.tryLoadClass("nachos.vm.VMKernel");
+		Class<?> clsKernel = Lib.loadClass(Config.getString("Kernel.kernel"));
+		Class<?> clsVMKernel = Lib.tryLoadClass("nachos.vm.VMKernel");
 
-	usingTLB =
-	    (clsVMKernel != null && clsVMKernel.isAssignableFrom(clsKernel));
-	
-	this.numPhysPages = numPhysPages;
+		usingTLB =
+			(clsVMKernel != null && clsVMKernel.isAssignableFrom(clsKernel));
+		
+		this.numPhysPages = numPhysPages;
 
-	for (int i=0; i<numUserRegisters; i++)
-	    registers[i] = 0;
+		for (int i=0; i<numUserRegisters; i++)
+			registers[i] = 0;
 
-	mainMemory = new byte[pageSize * numPhysPages];
+		mainMemory = new byte[pageSize * numPhysPages];
 
-	if (usingTLB) {
-	    translations = new TranslationEntry[tlbSize];
-	    for (int i=0; i<tlbSize; i++)
-		translations[i] = new TranslationEntry();
-	}
-	else {
-	    translations = null;
-	}
+		if (usingTLB) {
+			translations = new TranslationEntry[tlbSize];
+			for (int i=0; i<tlbSize; i++)
+			translations[i] = new TranslationEntry();
+		}
+		else {
+			translations = null;
+		}
     }
 
     /**
@@ -68,7 +68,7 @@ public final class Processor {
      * @param	exceptionHandler	the kernel exception handler.
      */
     public void setExceptionHandler(Runnable exceptionHandler) {
-	this.exceptionHandler = exceptionHandler;
+		this.exceptionHandler = exceptionHandler;
     }
 
     /**
@@ -78,31 +78,31 @@ public final class Processor {
      * @return	the exception handler.
      */
     public Runnable getExceptionHandler() {
-	return exceptionHandler;
+		return exceptionHandler;
     }
     
     /**
      * Start executing instructions at the current PC. Never returns.
      */
     public void run() {
-	Lib.debug(dbgProcessor, "starting program in current thread");
+		Lib.debug(dbgProcessor, "starting program in current thread");
 
-	registers[regNextPC] = registers[regPC] + 4;
+		registers[regNextPC] = registers[regPC] + 4;
 
-	Machine.autoGrader().runProcessor(privilege);
+		Machine.autoGrader().runProcessor(privilege);
 
-	Instruction inst = new Instruction();
-	
-	while (true) {
-	    try {
-		inst.run();
-	    }
-	    catch (MipsException e) {
-		e.handle();
-	    }
+		Instruction inst = new Instruction();
+		
+		while (true) {
+			try {
+			inst.run();
+			}
+			catch (MipsException e) {
+			e.handle();
+			}
 
-	    privilege.interrupt.tick(false);
-	}
+			privilege.interrupt.tick(false);
+		}
     }
 
     /**
@@ -112,9 +112,9 @@ public final class Processor {
      * @return	the value of the register.
      */
     public int readRegister(int number) {
-	Lib.assertTrue(number >= 0 && number < numUserRegisters);
-	
-	return registers[number];
+		Lib.assertTrue(number >= 0 && number < numUserRegisters);
+		
+		return registers[number];
     }
 
     /**
@@ -124,10 +124,10 @@ public final class Processor {
      * @param	value	the value to write.
      */
     public void writeRegister(int number, int value) {
-	Lib.assertTrue(number >= 0 && number < numUserRegisters);
+		Lib.assertTrue(number >= 0 && number < numUserRegisters);
 
-	if (number != 0)
-	    registers[number] = value;
+		if (number != 0)
+			registers[number] = value;
     }
 
     /**
@@ -150,7 +150,7 @@ public final class Processor {
      * @return	<tt>true</tt> if this processor has a software-managed TLB.
      */
     public boolean hasTLB() {
-	return usingTLB;
+		return usingTLB;
     }
 
     /**
@@ -159,9 +159,9 @@ public final class Processor {
      * @return	the current page table.
      */
     public TranslationEntry[] getPageTable() {
-	Lib.assertTrue(!usingTLB);
+		Lib.assertTrue(!usingTLB);
 
-	return translations;
+		return translations;
     }
 
     /**
@@ -172,9 +172,9 @@ public final class Processor {
      * @param	pageTable	the page table to use.
      */
     public void setPageTable(TranslationEntry[] pageTable) {
-	Lib.assertTrue(!usingTLB);
+		Lib.assertTrue(!usingTLB);
 
-	this.translations = pageTable;
+		this.translations = pageTable;
     }
 
     /**
@@ -183,9 +183,9 @@ public final class Processor {
      * @return	the number of entries in this processor's TLB.
      */
     public int getTLBSize() {
-	Lib.assertTrue(usingTLB);
-    
-	return tlbSize;
+		Lib.assertTrue(usingTLB);
+		
+		return tlbSize;
     }
 
     /**
@@ -195,10 +195,10 @@ public final class Processor {
      * @return	the contents of the specified TLB entry.
      */
     public TranslationEntry readTLBEntry(int number) {
-	Lib.assertTrue(usingTLB);
-	Lib.assertTrue(number >= 0 && number < tlbSize);
+		Lib.assertTrue(usingTLB);
+		Lib.assertTrue(number >= 0 && number < tlbSize);
 
-	return new TranslationEntry(translations[number]);
+		return new TranslationEntry(translations[number]);
     }
 
     /**
@@ -212,10 +212,10 @@ public final class Processor {
      * @param	entry	the new contents of the TLB entry.
      */
     public void writeTLBEntry(int number, TranslationEntry entry) {
-	Lib.assertTrue(usingTLB);
-	Lib.assertTrue(number >= 0 && number < tlbSize);
+		Lib.assertTrue(usingTLB);
+		Lib.assertTrue(number >= 0 && number < tlbSize);
 
-	translations[number] = new TranslationEntry(entry);
+		translations[number] = new TranslationEntry(entry);
     }
 
     /**
@@ -225,7 +225,7 @@ public final class Processor {
      * @return	the number of pages of physical memory.
      */
     public int getNumPhysPages() {
-	return numPhysPages;
+		return numPhysPages;
     }
 
     /**
@@ -235,7 +235,7 @@ public final class Processor {
      * @return	the main memory array.
      */
     public byte[] getMemory() {
-	return mainMemory;
+		return mainMemory;
     }
 
     /**
@@ -249,10 +249,10 @@ public final class Processor {
      * @return	a 32-bit address consisting of the specified page and offset.
      */
     public static int makeAddress(int page, int offset) {
-	Lib.assertTrue(page >= 0 && page < maxPages);
-	Lib.assertTrue(offset >= 0 && offset < pageSize);
+		Lib.assertTrue(page >= 0 && page < maxPages);
+		Lib.assertTrue(offset >= 0 && offset < pageSize);
 
-	return (page * pageSize) | offset;
+		return (page * pageSize) | offset;
     }
 
     /**
@@ -262,7 +262,7 @@ public final class Processor {
      * @return	the page number component of the address.
      */
     public static int pageFromAddress(int address) {
-	return (int) (((long) address & 0xFFFFFFFFL) / pageSize);
+		return (int) (((long) address & 0xFFFFFFFFL) / pageSize);
     }
 
     /**
@@ -272,11 +272,11 @@ public final class Processor {
      * @return	the offset component of the address.
      */
     public static int offsetFromAddress(int address) {
-	return (int) (((long) address & 0xFFFFFFFFL) % pageSize);
+		return (int) (((long) address & 0xFFFFFFFFL) % pageSize);
     }
 
     private void finishLoad() {
-	delayedLoad(0, 0, 0);
+		delayedLoad(0, 0, 0);
     }
 
     /**
@@ -293,99 +293,99 @@ public final class Processor {
      * @exception	MipsException	if a translation error occurred.
      */
     private int translate(int vaddr, int size, boolean writing)
-	throws MipsException {
-	if (Lib.test(dbgProcessor))
-	    System.out.println("\ttranslate vaddr=0x" + Lib.toHexString(vaddr)
-			       + (writing ? ", write" : ", read..."));
+		throws MipsException {
+		if (Lib.test(dbgProcessor))
+			System.out.println("\ttranslate vaddr=0x" + Lib.toHexString(vaddr)
+					+ (writing ? ", write" : ", read..."));
 
-	// check alignment
-	if ((vaddr & (size-1)) != 0) {
-	    Lib.debug(dbgProcessor, "\t\talignment error");
-	    throw new MipsException(exceptionAddressError, vaddr);
-	}
-
-	// calculate virtual page number and offset from the virtual address
-	int vpn = pageFromAddress(vaddr);
-	int offset = offsetFromAddress(vaddr);
-
-	TranslationEntry entry = null;
-
-	// if not using a TLB, then the vpn is an index into the table
-	if (!usingTLB) {
-	    if (translations == null || vpn >= translations.length ||
-		translations[vpn] == null ||
-		!translations[vpn].valid) {
-		privilege.stats.numPageFaults++;
-		Lib.debug(dbgProcessor, "\t\tpage fault");
-		throw new MipsException(exceptionPageFault, vaddr);
-	    }
-
-	    entry = translations[vpn];
-	}
-	// else, look through all TLB entries for matching vpn
-	else {
-	    for (int i=0; i<tlbSize; i++) {
-		if (translations[i].valid && translations[i].vpn == vpn) {
-		    entry = translations[i];
-		    break;
+		// check alignment
+		if ((vaddr & (size-1)) != 0) {
+			Lib.debug(dbgProcessor, "\t\talignment error");
+			throw new MipsException(exceptionAddressError, vaddr);
 		}
-	    }
-	    if (entry == null) {
-		privilege.stats.numTLBMisses++;
-		Lib.debug(dbgProcessor, "\t\tTLB miss");
-		throw new MipsException(exceptionTLBMiss, vaddr);
-	    }
-	}
 
-	// check if trying to write a read-only page
-	if (entry.readOnly && writing) {
-	    Lib.debug(dbgProcessor, "\t\tread-only exception");
-	    throw new MipsException(exceptionReadOnly, vaddr);
-	}
+		// calculate virtual page number and offset from the virtual address
+		int vpn = pageFromAddress(vaddr);
+		int offset = offsetFromAddress(vaddr);
 
-	// check if physical page number is out of range
-	int ppn = entry.ppn;
-	if (ppn < 0 || ppn >= numPhysPages) {
-	    Lib.debug(dbgProcessor, "\t\tbad ppn");
-	    throw new MipsException(exceptionBusError, vaddr);
-	}
+		TranslationEntry entry = null;
 
-	// set used and dirty bits as appropriate
-	entry.used = true;
-	if (writing)
-	    entry.dirty = true;
+		// if not using a TLB, then the vpn is an index into the table
+		if (!usingTLB) {
+			if (translations == null || vpn >= translations.length ||
+			translations[vpn] == null ||
+			!translations[vpn].valid) {
+			privilege.stats.numPageFaults++;
+			Lib.debug(dbgProcessor, "\t\tpage fault");
+			throw new MipsException(exceptionPageFault, vaddr);
+			}
 
-	int paddr = (ppn*pageSize) + offset;
+			entry = translations[vpn];
+		}
+		// else, look through all TLB entries for matching vpn
+		else {
+			for (int i=0; i<tlbSize; i++) {
+			if (translations[i].valid && translations[i].vpn == vpn) {
+				entry = translations[i];
+				break;
+			}
+			}
+			if (entry == null) {
+			privilege.stats.numTLBMisses++;
+			Lib.debug(dbgProcessor, "\t\tTLB miss");
+			throw new MipsException(exceptionTLBMiss, vaddr);
+			}
+		}
 
-	if (Lib.test(dbgProcessor))
-	    System.out.println("\t\tpaddr=0x" + Lib.toHexString(paddr));	
-	return paddr;
-    }
+		// check if trying to write a read-only page
+		if (entry.readOnly && writing) {
+			Lib.debug(dbgProcessor, "\t\tread-only exception");
+			throw new MipsException(exceptionReadOnly, vaddr);
+		}
 
-    /**
-     * Read </i>size</i> (1, 2, or 4) bytes of virtual memory at <i>vaddr</i>,
-     * and return the result.
-     *
-     * @param	vaddr	the virtual address to read from.
-     * @param	size	the number of bytes to read (1, 2, or 4).
-     * @return		the value read.
-     * @exception	MipsException	if a translation error occurred.
-     */
-    private int readMem(int vaddr, int size) throws MipsException {
-	if (Lib.test(dbgProcessor))
-	    System.out.println("\treadMem vaddr=0x" + Lib.toHexString(vaddr)
-			       + ", size=" + size);
+		// check if physical page number is out of range
+		int ppn = entry.ppn;
+		if (ppn < 0 || ppn >= numPhysPages) {
+			Lib.debug(dbgProcessor, "\t\tbad ppn");
+			throw new MipsException(exceptionBusError, vaddr);
+		}
 
-	Lib.assertTrue(size==1 || size==2 || size==4);
-	
-	int value = Lib.bytesToInt(mainMemory, translate(vaddr, size, false),
-				   size);
+		// set used and dirty bits as appropriate
+		entry.used = true;
+		if (writing)
+			entry.dirty = true;
 
-	if (Lib.test(dbgProcessor))
-	    System.out.println("\t\tvalue read=0x" +
-			       Lib.toHexString(value, size*2));
-	
-	return value;
+		int paddr = (ppn*pageSize) + offset;
+
+		if (Lib.test(dbgProcessor))
+			System.out.println("\t\tpaddr=0x" + Lib.toHexString(paddr));	
+		return paddr;
+		}
+
+		/**
+		* Read </i>size</i> (1, 2, or 4) bytes of virtual memory at <i>vaddr</i>,
+		* and return the result.
+		*
+		* @param	vaddr	the virtual address to read from.
+		* @param	size	the number of bytes to read (1, 2, or 4).
+		* @return		the value read.
+		* @exception	MipsException	if a translation error occurred.
+		*/
+		private int readMem(int vaddr, int size) throws MipsException {
+		if (Lib.test(dbgProcessor))
+			System.out.println("\treadMem vaddr=0x" + Lib.toHexString(vaddr)
+					+ ", size=" + size);
+
+		Lib.assertTrue(size==1 || size==2 || size==4);
+		
+		int value = Lib.bytesToInt(mainMemory, translate(vaddr, size, false),
+					size);
+
+		if (Lib.test(dbgProcessor))
+			System.out.println("\t\tvalue read=0x" +
+					Lib.toHexString(value, size*2));
+		
+		return value;
     }
     
     /**
@@ -398,16 +398,16 @@ public final class Processor {
      * @exception	MipsException	if a translation error occurred.
      */
     private void writeMem(int vaddr, int size, int value)
-	throws MipsException {
-	if (Lib.test(dbgProcessor))
-	    System.out.println("\twriteMem vaddr=0x" + Lib.toHexString(vaddr)
-			       + ", size=" + size + ", value=0x"
-			       + Lib.toHexString(value, size*2));
+		throws MipsException {
+		if (Lib.test(dbgProcessor))
+			System.out.println("\twriteMem vaddr=0x" + Lib.toHexString(vaddr)
+					+ ", size=" + size + ", value=0x"
+					+ Lib.toHexString(value, size*2));
 
-	Lib.assertTrue(size==1 || size==2 || size==4);
-	
-	Lib.bytesFromInt(mainMemory, translate(vaddr, size, true), size,
-			 value);
+		Lib.assertTrue(size==1 || size==2 || size==4);
+		
+		Lib.bytesFromInt(mainMemory, translate(vaddr, size, true), size,
+				value);
     }
 
     /**
@@ -423,17 +423,17 @@ public final class Processor {
      */
     private void delayedLoad(int nextLoadTarget, int nextLoadValue,
 			     int nextLoadMask) {
-	// complete previous delayed load, if not modifying r0
-	if (loadTarget != 0) {
-	    int savedBits = registers[loadTarget] & ~loadMask;
-	    int newBits = loadValue & loadMask;
-	    registers[loadTarget] = savedBits | newBits;
-	}
+		// complete previous delayed load, if not modifying r0
+		if (loadTarget != 0) {
+			int savedBits = registers[loadTarget] & ~loadMask;
+			int newBits = loadValue & loadMask;
+			registers[loadTarget] = savedBits | newBits;
+		}
 
-	// schedule next load
-	loadTarget = nextLoadTarget;
-	loadValue = nextLoadValue;
-	loadMask = nextLoadMask;
+		// schedule next load
+		loadTarget = nextLoadTarget;
+		loadValue = nextLoadValue;
+		loadMask = nextLoadMask;
     }
 
     /**
@@ -449,7 +449,7 @@ public final class Processor {
      * on to the next instruction.
      */
     public void advancePC() {
-	advancePC(registers[regNextPC]+4);
+		advancePC(registers[regNextPC]+4);
     }
 
     /**
@@ -459,8 +459,8 @@ public final class Processor {
      * @param	nextPC	the new value of the nextPC register.
      */
     private void advancePC(int nextPC) {
-	registers[regPC] = registers[regNextPC];
-	registers[regNextPC] = nextPC;
+		registers[regPC] = registers[regNextPC];
+		registers[regNextPC] = nextPC;
     }
 
     /** Caused by a syscall instruction. */
@@ -482,14 +482,14 @@ public final class Processor {
 
     /** The names of the CPU exceptions. */
     public static final String exceptionNames[] = {
-	"syscall      ",
-	"page fault   ",
-	"TLB miss     ",
-	"read-only    ",
-	"bus error    ",
-	"address error",
-	"overflow     ",
-	"illegal inst "
+		"syscall      ",
+		"page fault   ",
+		"TLB miss     ",
+		"read-only    ",
+		"bus error    ",
+		"address error",
+		"overflow     ",
+		"illegal inst "
     };
     
     /** Index of return value register 0. */
@@ -1064,258 +1064,258 @@ public final class Processor {
     }
 
     private static class Mips {
-	Mips() {
-	}
+		Mips() {
+		}
 
-	Mips(int operation, String name) {
-	    this.operation = operation;
-	    this.name = name;
-	}
+		Mips(int operation, String name) {
+		    this.operation = operation;
+		    this.name = name;
+		}
 	    
-	Mips(int operation, String name, int format, int flags) {
-	    this(operation, name);
-	    this.format = format;
-	    this.flags = flags;
-	}
+		Mips(int operation, String name, int format, int flags) {
+		    this(operation, name);
+		    this.format = format;
+		    this.flags = flags;
+		}
 
-	int operation = INVALID;
-	String name = "invalid ";
-	int format;
-	int flags;
+		int operation = INVALID;
+		String name = "invalid ";
+		int format;
+		int flags;
 
-	// operation types
-	static final int
-	    INVALID	= 0,
-	    UNIMPL	= 1,
-	    ADD		= 2,
-	    SUB		= 3,
-	    MULT	= 4,
-	    DIV		= 5,
-	    SLL		= 6,
-	    SRA		= 7,
-	    SRL		= 8,
-	    SLT		= 9,
-	    AND		= 10,
-	    OR		= 11,
-	    NOR		= 12,
-	    XOR		= 13,
-	    LUI		= 14,
-	    MFLO	= 21,
-	    MFHI	= 22,
-	    MTLO	= 23,
-	    MTHI	= 24,
-	    JUMP	= 25,
-	    BEQ		= 26,
-	    BNE		= 27,
-	    BLEZ	= 28,
-	    BGTZ	= 29,
-	    BLTZ	= 30,
-	    BGEZ	= 31,
-	    SYSCALL	= 32,
-	    LOAD	= 33,
-	    LWL		= 36,
-	    LWR		= 37,
-	    STORE	= 38,
-	    SWL		= 39,
-	    SWR		= 40,
-	    MAX		= 40;
+		// operation types
+		static final int
+			INVALID	= 0,
+			UNIMPL	= 1,
+			ADD		= 2,
+			SUB		= 3,
+			MULT	= 4,
+			DIV		= 5,
+			SLL		= 6,
+			SRA		= 7,
+			SRL		= 8,
+			SLT		= 9,
+			AND		= 10,
+			OR		= 11,
+			NOR		= 12,
+			XOR		= 13,
+			LUI		= 14,
+			MFLO	= 21,
+			MFHI	= 22,
+			MTLO	= 23,
+			MTHI	= 24,
+			JUMP	= 25,
+			BEQ		= 26,
+			BNE		= 27,
+			BLEZ	= 28,
+			BGTZ	= 29,
+			BLTZ	= 30,
+			BGEZ	= 31,
+			SYSCALL	= 32,
+			LOAD	= 33,
+			LWL		= 36,
+			LWR		= 37,
+			STORE	= 38,
+			SWL		= 39,
+			SWR		= 40,
+			MAX		= 40;
 
-	static final int
-	    IFMT = 1,
-	    JFMT = 2,
-	    RFMT = 3;
+		static final int
+			IFMT = 1,
+			JFMT = 2,
+			RFMT = 3;
 
-	static final int
-	    DST		= 0x00000001,
-	    DSTRA	= 0x00000002,
-	    OVERFLOW	= 0x00000004,
-	    SRC1SH	= 0x00000008,
-	    SRC2IMM	= 0x00000010,
-	    UNSIGNED	= 0x00000020,
-	    LINK	= 0x00000040,
-	    DELAYEDLOAD	= 0x00000080,
-	    SIZEB	= 0x00000100,
-	    SIZEH	= 0x00000200,
-	    SIZEW	= 0x00000400,
-	    BRANCH	= 0x00000800;
+		static final int
+			DST		= 0x00000001,
+			DSTRA	= 0x00000002,
+			OVERFLOW	= 0x00000004,
+			SRC1SH	= 0x00000008,
+			SRC2IMM	= 0x00000010,
+			UNSIGNED	= 0x00000020,
+			LINK	= 0x00000040,
+			DELAYEDLOAD	= 0x00000080,
+			SIZEB	= 0x00000100,
+			SIZEH	= 0x00000200,
+			SIZEW	= 0x00000400,
+			BRANCH	= 0x00000800;
 
-	static final char
-	    RS			= 's',
-	    RT			= 't',
-	    RD			= 'd',
-	    IMM			= 'i',
-	    SHIFTAMOUNT		= 'h',
-	    ADDR		= 'a',	// imm(rs)
-	    TARGET		= 'j',
-	    RETURNADDRESS	= 'r';	// rd, or none if rd=31; can't be last
+		static final char
+			RS			= 's',
+			RT			= 't',
+			RD			= 'd',
+			IMM			= 'i',
+			SHIFTAMOUNT		= 'h',
+			ADDR		= 'a',	// imm(rs)
+			TARGET		= 'j',
+			RETURNADDRESS	= 'r';	// rd, or none if rd=31; can't be last
 
-	static final Mips[] optable = {
-	    new Mips(),						// special
-	    new Mips(),						// reg-imm
-	    new Mips(JUMP,	"j j",		JFMT, BRANCH),
-	    new Mips(JUMP,	"jal j",	JFMT, BRANCH|LINK|DST|DSTRA),
-	    new Mips(BEQ,	"beq stj",	IFMT, BRANCH),
-	    new Mips(BNE,	"bne stj",	IFMT, BRANCH),
-	    new Mips(BLEZ,	"blez sj",	IFMT, BRANCH),
-	    new Mips(BGTZ,	"bgtz sj",	IFMT, BRANCH),
-	    new Mips(ADD,	"addi tsi",	IFMT, DST|SRC2IMM|OVERFLOW),
-	    new Mips(ADD,	"addiu tsi",	IFMT, DST|SRC2IMM),
-	    new Mips(SLT,	"slti tsi",	IFMT, DST|SRC2IMM),
-	    new Mips(SLT,	"sltiu tsi",	IFMT, DST|SRC2IMM|UNSIGNED),
-	    new Mips(AND,	"andi tsi",	IFMT, DST|SRC2IMM|UNSIGNED),
-	    new Mips(OR,	"ori tsi",	IFMT, DST|SRC2IMM|UNSIGNED),
-	    new Mips(XOR,	"xori tsi",	IFMT, DST|SRC2IMM|UNSIGNED),
-	    new Mips(LUI,	"lui ti",	IFMT, DST|SRC2IMM|UNSIGNED),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(BEQ,	"beql stj",	IFMT, BRANCH),
-	    new Mips(BNE,	"bnel stj",	IFMT, BRANCH),
-	    new Mips(BLEZ,	"blezl sj",	IFMT, BRANCH),
-	    new Mips(BGTZ,	"bgtzl sj",	IFMT, BRANCH),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(LOAD,	"lb ta",	IFMT, DELAYEDLOAD|SIZEB),
-	    new Mips(LOAD,	"lh ta",	IFMT, DELAYEDLOAD|SIZEH),
-	    new Mips(LWL,	"lwl ta",	IFMT, DELAYEDLOAD),
-	    new Mips(LOAD,	"lw ta",	IFMT, DELAYEDLOAD|SIZEW),
-	    new Mips(LOAD,	"lbu ta",    IFMT, DELAYEDLOAD|SIZEB|UNSIGNED),
-	    new Mips(LOAD,	"lhu ta",    IFMT, DELAYEDLOAD|SIZEH|UNSIGNED),
-	    new Mips(LWR,	"lwr ta",	IFMT, DELAYEDLOAD),
-	    new Mips(),
-	    new Mips(STORE,	"sb ta",	IFMT, SIZEB),
-	    new Mips(STORE,	"sh ta",	IFMT, SIZEH),
-	    new Mips(SWL,   	"swl ta",	IFMT, 0),
-	    new Mips(STORE,	"sw ta",	IFMT, SIZEW),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(SWR,   	"swr ta",	IFMT, 0),
-	    new Mips(),
-	    new Mips(UNIMPL,	"ll "),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(UNIMPL,	"sc "),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),	    
-	};
+		static final Mips[] optable = {
+			new Mips(),						// special
+			new Mips(),						// reg-imm
+			new Mips(JUMP,	"j j",		JFMT, BRANCH),
+			new Mips(JUMP,	"jal j",	JFMT, BRANCH|LINK|DST|DSTRA),
+			new Mips(BEQ,	"beq stj",	IFMT, BRANCH),
+			new Mips(BNE,	"bne stj",	IFMT, BRANCH),
+			new Mips(BLEZ,	"blez sj",	IFMT, BRANCH),
+			new Mips(BGTZ,	"bgtz sj",	IFMT, BRANCH),
+			new Mips(ADD,	"addi tsi",	IFMT, DST|SRC2IMM|OVERFLOW),
+			new Mips(ADD,	"addiu tsi",	IFMT, DST|SRC2IMM),
+			new Mips(SLT,	"slti tsi",	IFMT, DST|SRC2IMM),
+			new Mips(SLT,	"sltiu tsi",	IFMT, DST|SRC2IMM|UNSIGNED),
+			new Mips(AND,	"andi tsi",	IFMT, DST|SRC2IMM|UNSIGNED),
+			new Mips(OR,	"ori tsi",	IFMT, DST|SRC2IMM|UNSIGNED),
+			new Mips(XOR,	"xori tsi",	IFMT, DST|SRC2IMM|UNSIGNED),
+			new Mips(LUI,	"lui ti",	IFMT, DST|SRC2IMM|UNSIGNED),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(BEQ,	"beql stj",	IFMT, BRANCH),
+			new Mips(BNE,	"bnel stj",	IFMT, BRANCH),
+			new Mips(BLEZ,	"blezl sj",	IFMT, BRANCH),
+			new Mips(BGTZ,	"bgtzl sj",	IFMT, BRANCH),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(LOAD,	"lb ta",	IFMT, DELAYEDLOAD|SIZEB),
+			new Mips(LOAD,	"lh ta",	IFMT, DELAYEDLOAD|SIZEH),
+			new Mips(LWL,	"lwl ta",	IFMT, DELAYEDLOAD),
+			new Mips(LOAD,	"lw ta",	IFMT, DELAYEDLOAD|SIZEW),
+			new Mips(LOAD,	"lbu ta",    IFMT, DELAYEDLOAD|SIZEB|UNSIGNED),
+			new Mips(LOAD,	"lhu ta",    IFMT, DELAYEDLOAD|SIZEH|UNSIGNED),
+			new Mips(LWR,	"lwr ta",	IFMT, DELAYEDLOAD),
+			new Mips(),
+			new Mips(STORE,	"sb ta",	IFMT, SIZEB),
+			new Mips(STORE,	"sh ta",	IFMT, SIZEH),
+			new Mips(SWL,   	"swl ta",	IFMT, 0),
+			new Mips(STORE,	"sw ta",	IFMT, SIZEW),
+			new Mips(),
+			new Mips(),
+			new Mips(SWR,   	"swr ta",	IFMT, 0),
+			new Mips(),
+			new Mips(UNIMPL,	"ll "),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(UNIMPL,	"sc "),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),	    
+		};
 
-	static final Mips[] specialtable = {
-	    new Mips(SLL,	"sll dth",	RFMT, DST|SRC1SH),
-	    new Mips(),
-	    new Mips(SRL,	"srl dth",	RFMT, DST|SRC1SH),
-	    new Mips(SRA,	"sra dth",	RFMT, DST|SRC1SH),
-	    new Mips(SLL,	"sllv dts",	RFMT, DST),
-	    new Mips(),
-	    new Mips(SRL,	"srlv dts",	RFMT, DST),
-	    new Mips(SRA,	"srav dts",	RFMT, DST),
-	    new Mips(JUMP,	"jr s",		RFMT, BRANCH),
-	    new Mips(JUMP,	"jalr rs",	RFMT, BRANCH|LINK|DST),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(SYSCALL,	"syscall "),
-	    new Mips(UNIMPL,	"break "),
-	    new Mips(),
-	    new Mips(UNIMPL,	"sync "),
-	    new Mips(MFHI,	"mfhi d",	RFMT, DST),
-	    new Mips(MTHI,	"mthi s",	RFMT, 0),
-	    new Mips(MFLO,	"mflo d",	RFMT, DST),
-	    new Mips(MTLO,	"mtlo s",	RFMT, 0),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(MULT,	"mult st",	RFMT, 0),
-	    new Mips(MULT,	"multu st",	RFMT, UNSIGNED),
-	    new Mips(DIV,	"div st",	RFMT, 0),
-	    new Mips(DIV,	"divu st",	RFMT, UNSIGNED),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(ADD,	"add dst",	RFMT, DST|OVERFLOW),
-	    new Mips(ADD,	"addu dst",	RFMT, DST),
-	    new Mips(SUB,	"sub dst",	RFMT, DST|OVERFLOW),
-	    new Mips(SUB,	"subu dst",	RFMT, DST),
-	    new Mips(AND,	"and dst",	RFMT, DST),
-	    new Mips(OR,	"or dst",	RFMT, DST),
-	    new Mips(XOR,	"xor dst",	RFMT, DST),
-	    new Mips(NOR,	"nor dst",	RFMT, DST),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(SLT,	"slt dst",	RFMT, DST),
-	    new Mips(SLT,	"sltu dst",	RFMT, DST|UNSIGNED),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	};
+		static final Mips[] specialtable = {
+			new Mips(SLL,	"sll dth",	RFMT, DST|SRC1SH),
+			new Mips(),
+			new Mips(SRL,	"srl dth",	RFMT, DST|SRC1SH),
+			new Mips(SRA,	"sra dth",	RFMT, DST|SRC1SH),
+			new Mips(SLL,	"sllv dts",	RFMT, DST),
+			new Mips(),
+			new Mips(SRL,	"srlv dts",	RFMT, DST),
+			new Mips(SRA,	"srav dts",	RFMT, DST),
+			new Mips(JUMP,	"jr s",		RFMT, BRANCH),
+			new Mips(JUMP,	"jalr rs",	RFMT, BRANCH|LINK|DST),
+			new Mips(),
+			new Mips(),
+			new Mips(SYSCALL,	"syscall "),
+			new Mips(UNIMPL,	"break "),
+			new Mips(),
+			new Mips(UNIMPL,	"sync "),
+			new Mips(MFHI,	"mfhi d",	RFMT, DST),
+			new Mips(MTHI,	"mthi s",	RFMT, 0),
+			new Mips(MFLO,	"mflo d",	RFMT, DST),
+			new Mips(MTLO,	"mtlo s",	RFMT, 0),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(MULT,	"mult st",	RFMT, 0),
+			new Mips(MULT,	"multu st",	RFMT, UNSIGNED),
+			new Mips(DIV,	"div st",	RFMT, 0),
+			new Mips(DIV,	"divu st",	RFMT, UNSIGNED),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(ADD,	"add dst",	RFMT, DST|OVERFLOW),
+			new Mips(ADD,	"addu dst",	RFMT, DST),
+			new Mips(SUB,	"sub dst",	RFMT, DST|OVERFLOW),
+			new Mips(SUB,	"subu dst",	RFMT, DST),
+			new Mips(AND,	"and dst",	RFMT, DST),
+			new Mips(OR,	"or dst",	RFMT, DST),
+			new Mips(XOR,	"xor dst",	RFMT, DST),
+			new Mips(NOR,	"nor dst",	RFMT, DST),
+			new Mips(),
+			new Mips(),
+			new Mips(SLT,	"slt dst",	RFMT, DST),
+			new Mips(SLT,	"sltu dst",	RFMT, DST|UNSIGNED),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+		};
 
-	static final Mips[] regimmtable = {
-	    new Mips(BLTZ,	"bltz sj",	IFMT, BRANCH),
-	    new Mips(BGEZ,	"bgez sj",	IFMT, BRANCH),
-	    new Mips(BLTZ,	"bltzl sj",	IFMT, BRANCH),
-	    new Mips(BGEZ,	"bgezl sj",	IFMT, BRANCH),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(BLTZ,	"bltzal sj",	IFMT, BRANCH|LINK|DST|DSTRA),
-	    new Mips(BGEZ,	"bgezal sj",	IFMT, BRANCH|LINK|DST|DSTRA),
-	    new Mips(BLTZ,	"bltzlal sj",	IFMT, BRANCH|LINK|DST|DSTRA),
-	    new Mips(BGEZ,	"bgezlal sj",	IFMT, BRANCH|LINK|DST|DSTRA),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips(),
-	    new Mips()
-	};
+		static final Mips[] regimmtable = {
+			new Mips(BLTZ,	"bltz sj",	IFMT, BRANCH),
+			new Mips(BGEZ,	"bgez sj",	IFMT, BRANCH),
+			new Mips(BLTZ,	"bltzl sj",	IFMT, BRANCH),
+			new Mips(BGEZ,	"bgezl sj",	IFMT, BRANCH),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(BLTZ,	"bltzal sj",	IFMT, BRANCH|LINK|DST|DSTRA),
+			new Mips(BGEZ,	"bgezal sj",	IFMT, BRANCH|LINK|DST|DSTRA),
+			new Mips(BLTZ,	"bltzlal sj",	IFMT, BRANCH|LINK|DST|DSTRA),
+			new Mips(BGEZ,	"bgezlal sj",	IFMT, BRANCH|LINK|DST|DSTRA),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips(),
+			new Mips()
+		};
     }
 }

@@ -4,6 +4,17 @@ import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
 
+import java.util.LinkedList;
+import java.util.Iterator;
+import java.util.HashMap;
+
+// phase2 - ii
+// come up with a way allocate machine's physical memory
+// allocate a fixed number of pages for the process'work
+// 8 pages should be sufficient
+// maintain a global linked list of free physical pages
+// should be effecinet ; not continous but have gaps
+
 /**
  * A kernel that can support multiple user processes.
  */
@@ -27,6 +38,13 @@ public class UserKernel extends ThreadedKernel {
     	Machine.processor().setExceptionHandler(new Runnable() {
     		public void run() { exceptionHandler(); }
     	    });
+        
+        // from thinkhy -- modified by wx
+        int numPhysPages = Machine.processor().getNumPhysPages(); //return the total number of physical pages
+        // add all the physical pages to the physical page table (linked list)
+        for (int i = 0; i < numPhysPages; i++) {
+            physPageTable.add(i);
+        }
     }
 
     /**
@@ -34,20 +52,26 @@ public class UserKernel extends ThreadedKernel {
      */
     public void selfTest() {
     	// super.selfTest();
-        // disable this to test for the proj2
+        // disable this to test for the phase2 temporally
 
     	System.out.println("Testing the console device. Typed characters");
     	System.out.println("will be echoed until q is typed.");
 
+        
     	char c;
 
     	do {
+            // using simaphore P() wait for input
+            // if need to wait, using KThread.sleep()
+            // main thread went into waiting queue
+            // readythread get empty so execute idle
     	    c = (char) console.readByte(true);
     	    console.writeByte(c);
     	}
     	while (c != 'q');
 
     	System.out.println("");
+        
     }
 
     /**
@@ -91,14 +115,18 @@ public class UserKernel extends ThreadedKernel {
      * @see	nachos.machine.Machine#getShellProgramName
      */
     public void run() {
-    	super.run();
-
+    	super.run();   // threadedKernel.run() // empty method
+        // create user thread
     	UserProcess process = UserProcess.newUserProcess();
-
+        // shellProgram = halt.coff or sh.coff
     	String shellProgram = Machine.getShellProgramName();
+        // this user thread create a nachos user thread (UThread),
+        // this user thread create a child KThread to run shell through KThread
     	Lib.assertTrue(process.execute(shellProgram, new String[] { }));
 
     	KThread.currentThread().finish();
+        System.out.println("KThread.currentThread().finish() -- UserKernel.java run()");
+        // KThread main thread finished, and child thread implement shell
     }
 
     /**
@@ -107,13 +135,72 @@ public class UserKernel extends ThreadedKernel {
     public void terminate() {
 	       super.terminate();
     }
-    public static void deallocatePage(int a0){}
-    public static int allocatePage(){return 0;}
 
+    // from thinkhy -- modified by wx
+    
+    public static int getFreePage() {
+        int pageNumber = -1;
+        Machine.interrupt().disable();
+        if (physPageTable.isEmpty() == false)
+            pageNumber = physPageTable.removeFirst();
+        // get first free physical page by remove it from physPageTable 
+        Machine.interrupt().enable();
+        return pageNumber;
+    }
+
+    public static void addFreePage(int pageNumber) {
+        // make sure the pageNumber is leagal
+        Lib.assertTrue(pageNumber>=0 && pageNumber < Machine.processor().getNumPhysPages());
+        Machine.interrupt().disable();
+        // add the pageNumber to the end of physPageTable  
+        physPageTable.add(pageNumber);
+        Machine.interrupt().enable();
+    }
+
+    public static int getNextPid() {
+        int retval;
+        Machine.interrupt().disable();
+        retval = ++ nextPid;
+        Machine.interrupt().enabled();
+        return nextPid;
+    }
+
+    public static UserProcess getProcessByID(int pid) {
+        return processMap.get(pid);
+    }
+
+    public static UserProcess registerProcess(int pid, UserProcess process) {
+        UserProcess insertedProcess;
+        Machine.interrupt().disable();
+        insertedProcess = processMap.put(pid, process);
+        Machine.interrupt().enable();
+        return insertedProcess;
+    }
+
+    public static UserProcess unregisterProcess(int pid) {
+        UserProcess deletedProcess;
+        Machine.interrupt().disable();
+        deletedProcess = processMap.remove(pid);
+        Machine.interrupt().enabled();
+        return deletedProcess;
+    }
+    
+    // 
+
+    // public static void deallocatePage(int a0){}
+    // public static int allocatePage(){return 0;}
+    
 
     /** Globally accessible reference to the synchronized console. */
     public static SynchConsole console;
 
     // dummy variables to make javac smarter
     private static Coff dummy1 = null;
+
+    // from thinkhy - modified by wx
+    // maintain a global linked list of free physical pages.
+    private static LinkedList<Integer> physPageTable = new LinkedList<Integer>();
+    private static int nextPid = 0;
+    private static HashMap<Integer, UserProcess> processMap = new HashMap<Integer, UserProcess>();
+    
 }
