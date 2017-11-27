@@ -1,1 +1,2 @@
 test if it can merge
+add a message
