@@ -79,7 +79,7 @@ public class StubFileSystem implements FileSystem {
 	      StubOpenFile(final String name, final boolean truncate)
   	    throws IOException {
   	    super(StubFileSystem.this, name);
-		System.out.println("StubFileSystem - StubOpenFile");
+		// System.out.println("StubFileSystem - StubOpenFile");
   	    final File f = new File(directory, name);
 
   	    if (openCount == maxOpenFiles)

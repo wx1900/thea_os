@@ -57,21 +57,6 @@ public class UserProcess {
         // this.processID = processesCreated++;
         this.pid = processesCreated++;
         this.childrenCreated = new HashSet<Integer>();
-
-        // from thinkhy 
-        /*for(int i = 0; i < MAX_OPEN_FILES_PER_PROCESS; i++) {
-            fd[i] = new FileDescriptor();
-        }
-        fd[STDIN].file = UserKernel.console.openForReading();
-        fd[STDIN].position = 0;
-        Lib.assertTrue(fd[STDIN] != null);
-        OpenFile retval = UserKernel.fileSystem.open("out", false);
-        int fileHandle = findEmptyFileDescriptor();
-        fd[fileHandle].file = retval;
-        fd[fileHandle].position = 0;
-        pid = UserKernel.getNextPid();
-        UserKernel.registerProcess(pid, this);
-        */
     }
 
     /**
@@ -96,13 +81,13 @@ public class UserProcess {
     public boolean execute(String name, String[] args) {
       	if (!load(name, args)) // load executable file into this progress
       	    return false;
-        System.out.println("load Successfully!");
+        System.out.println("execute() - load Successfully!");
 
       	// new UThread(this).setName(name).fork();
       	UThread UT = new UThread(this); // set the execute object to UThread.runProgram()
         UT.setName(name);
         UT.fork();
-          
+        // System.out.println("execute() - fork Sucessfully!");
         return true;
     }
 
@@ -476,49 +461,8 @@ public class UserProcess {
     /**
      *  Hanlde the exec system call
      */
-    // from thinkhy
-    private int handleExec(int a0,int a1, int a2) {
-        /*Lib.debug(dbgProcess, "handleExec()");
-        if(argc < 1) {
-            // Lib.debug(dbgProcess, "[UserProcess::handleExec] Error: argc < 1");
-            System.out.println("[UserProcess::handleExec] Error: argc < 1");
-            return -1;
-        }
-        String fileName = readVirtualMemoryString(file, MAX_FILE_LENGTH);
-        if (fileName == null) {
-            System.out.println("[UserProcess:handleExec] Error: filename == NULL");
-            return -1;
-        }
-        // fileName doesn't have the ".coff" extension
-        String suffix = fileName.substring(fileName.length()-4,fileName.length());
-        if(suffix.equals(".coff")) {
-            System.out.println("handleExec(): filename doesn't have the "+coff+" extension");
-            return -1;
-        }
-        // get args from addrss of argv
-        String args[] = new String[argc];
-        byte temp[] = new byte[4];
-        for (int i = 0; i < argc; i++) {
-            int cntBytes = readVirtualMemory(argv+i*4, temp);
-            if(cntBytes != 4) 
-                return -1;
-            int argAddress = Lib.bytesToInt(temp, 0);
-            args[i] = readVirtualMemoryString(argAddress, MAX_FILE_LENGTH);
-        }
-        // create a new child process
-        UserProcess childProcess = UserProcess.newUserProcess();
-        childProcess.ppid = this.pid;
-        this.children.add(childProcess.pid);
-        System.out.println("[UserProcess.handleExec] process "
-            + this.pid + " add a child with pid = "+ childProcess.pid);
-        // invoke UserProcess.execute to load executable and create a new UThread
-        boolean retval = childProcess.execute(fileName, args);
-        if (retval) {
-            return childProcess.pid;
-        }else {
-            return -1;
-        }*/
 
+    private int handleExec(int a0,int a1, int a2) {
         // from han
         int pFile = a0;
         int argc = a1;
@@ -544,11 +488,9 @@ public class UserProcess {
 					remainingBytes -= argvStrings[i].length();
 				}
 				UserProcess childProcess = UserProcess.newUserProcess();
-				if (childProcess.execute(fileName, argvStrings)) { // tries to
-																	// load and
-																	// run
-																	// program
+				if (childProcess.execute(fileName, argvStrings)) { // tries to load and run program 
 					childrenCreated.add(childProcess.pid);
+                    System.out.println("handleExec() - chilidProcess.pid="+childProcess.pid);
 					return childProcess.pid;
 				}
 			}
@@ -563,39 +505,7 @@ public class UserProcess {
      *  exit abnormally if kernel kills it
      *  The last process to call exit() should cause the machine to halt by calling Kernel.kernel.terminate()
      */
-    private void handleExit(int status){
-        // from thinkhy
-       /*Lib.debug(dbgProcess, "handleExit()");
-
-      
-        // chose open file descriptors belonging to the process
-        for (int i = 0; i < MAX_OPEN_FILES_PER_PROCESS; i++) {
-            if (fd[i].file != null)
-                handleClose(i);
-        }
-
-        // set any children of the process no longer have a parent process
-        while (children != null && !children.isEmpty()) {
-            int childPid = children.removeFirst();
-            UserProcess childProcess = UserKernel.getProcessByID(childPid);
-            childProcess.ppid = ROOT;
-        }
-        
-        // set the process's exit status to status that caller specified or -1
-        this.exitStatus = exitStatus;
-        
-        // unloadSections and release memory pages
-        this.unloadSections();
-
-        // finish associated thread
-        if (this.pid == ROOT) {
-            Kernel.kernel.terminate(); // terminate this kernel
-        }else {
-            KThread.currentThread().finish();
-        }
-
-        Lib.assertNotReached();*/
-    
+    private void handleExit(int status){    
         // from han & thinkhy
         coff.close();
         // set any children of the process no longer have a parent process
@@ -661,44 +571,6 @@ public class UserProcess {
      *  Handle the open() system call
      */
     private int handleOpen(int a0) {
-        // from thinkhy
-        // Lib.debug(dbgProcess, "handleOpen()");
-        // // a0 is address of filename
-        // String fileName = readVirtualMemoryString(a0, MAX_FILE_LENGTH);
-
-        // Lib.debug(dbgProcess, "fileName: "+fileName);
-        
-        // // invoke open through stubFilesystem, truncate flag is set to false
-        // OpenFile retval = UserKernel.fileSystem.open(fileName, false);
-
-        // if (retval == null) {
-        //     return -1;
-        // }else {
-        //     int fileHandle = findEmptyFileDescriptor();
-        //     if (fileHandle < 0) {
-        //         return -1;
-        //     }else {
-        //         fd[fileHandle].fileName = fileName;
-        //         fd[fileHandle].file = retval;
-        //         fd[fileHandle].position = 0;
-        //         return fileHandle;
-        //     }
-        // }
-        // private int handleOpen(int fileAddress)
-        // {
-        // String filename=readVirtualMemoryString(fileAddress,256);//限定文件名长度
-        // if(filename==null)
-        // return -1;
-        // int fileDescriptor=findEmpty();
-        // if(fileDescriptor==-1)//为空，报错。
-        // return -1;
-        // else
-        // {
-        // openfile[fileDescriptor]=ThreadedKernel.fileSystem.open(filename,
-        // false);
-        // return fileDescriptor;
-        // }
-        // }
 
         // from han
         
@@ -740,34 +612,6 @@ public class UserProcess {
      */
     // a0:filename, a1:buf address, a2:buf size
     private int handleRead(int a0,int a1, int a2) {
-        // from thinkhy
-        // Lib.debug(dbgProcess, "handleRead()");
-
-        // int handle = a0;
-        // int vaddr = a1;
-        // int bufsize = a2;
-
-        // Lib.debug(dbgProcess, "handle: " + handle);
-        // Lib.debug(dbgProcess, "buf address: " + vaddr);
-        // Lib.debug(dbgProcess, "buf size: " + bufsize);
-
-        // // get data regarding to file descriptor
-        // if (handle < 0 || handle > MAX_OPEN_FILES_PER_PROCESS
-        //         ||fd[handle].file == null)
-        //     return -1;
-        // FileDescriptor fdr = fd[handle];
-        // byte[] buf = new byte[bufsize];
-
-        // // invoke read through stubFilesystem
-        // int retval = fdr.file.read(fdr.position, buf, 0, bufsize);
-        // if (retval < 0) {
-        //     return -1;
-        // }else {
-        //     int number = writeVirtualMemory(vaddr, buf);
-        //     fdr.position = fdr.position + number;
-        //     return retval;
-        // }
-        
         // from han
         int fileDescriptor = a0;
         int pBuffer = a1;
@@ -801,42 +645,6 @@ public class UserProcess {
      * handleCreate
      */
     private int handleCreate(final int a0) {
-        // from thinkhy
-        /*Lib.debug(dbgProcess, "handleCreate()");
-        // a0 is address of filename
-        String fileName = readVirtualMemoryString(a0, MAX_FILE_LENGTH);
-        Lib.debug(dbgProcess, "fileName: "+ fileName);
-
-        // invoke open through stubFilesystem
-        OpenFile retval = UserKernel.fileSystem.open(fileName, true);
-        if (retval == null) {
-            return -1;
-        }else {
-            int fileHandle = findEmptyFileDescriptor();
-            if (fileHandle < 0) {
-                return -1;
-            }else {
-                fd[fileHandle].fileName = fileName;
-                fd[fileHandle].file = retval;
-                fd[fileHandle].position = 0;
-                return fileHandle;
-            }
-        }*/
-        // private int handleCreate(int fileAddress)
-        // {
-        // String filename=readVirtualMemoryString(fileAddress,256);//限定文件名长度
-        // if(filename==null)
-        // return -1;
-        // int fileDescriptor=findEmpty();
-        // if(fileDescriptor==-1)
-        // return -1;
-        // else
-        // {
-        // openfile[fileDescriptor]=ThreadedKernel.fileSystem.open(filename,
-        // true);
-        // return fileDescriptor;
-        // }
-        // }
         final String fileName = readVirtualMemoryString(a0, MAX_FILENAME_LENGTH);
         // Is this fileName valid?
         if (fileName == null || fileName.length() == 0) {
@@ -870,30 +678,6 @@ public class UserProcess {
     /**
      * case syscallClose : return handleClose(a0);
      */
-    /*private int handleClose(int a0) {
-        // from thinkhy
-        Lib.debug(dbgProcess, "handleClose()");
-        int handle = a0;
-        if(a0 < 0 || a0 >= MAX_OPEN_FILES_PER_PROCESS)
-            return -1;
-        boolean retval = true;
-        FileDescriptor fdc = fd[handle];
-
-        fdc.position = 0;
-        fdc.file.close();
-
-        // remove this file if necessary
-        if (fdc.toRemove) {
-            retval = UserKernel.fileSystem.remove(fdc.fileName);
-            fdc.toRemove = false;
-        }
-
-        fdc.fileName = "";
-
-        return retval ? 0:-1;
-
-    }
-*/
     // from han
     private int handleClose(final int fileDescriptor) {
         if(fileDescriptor <0 || fileDescriptor >= MAX_OPEN_FILES_PER_PROCESS) {
@@ -921,33 +705,6 @@ public class UserProcess {
      *  Handle syscall write()
      */
     private int handleWrite (int a0, int a1,int a2) {
-        // from thinkhy
-        /*Lib.debug(dbgProcess, "handleWrite()");
-
-        int handle = a0;    // a0 is file descriptor handle
-        int vaddr = a1;     // a1 is buf address
-        int bufsize = a2;   // a2 is buf size
-
-        Lib.debug(dbgProcess, "handle: "+handle);
-        Lib.debug(dbgProcess, "buf address: "+vaddr);
-        Lib.debug(dbgProcess, "buf size: "+bufsize);
-
-        // get data regarding to file descriptor
-        if (handle < 0 || handle > MAX_OPEN_FILES_PER_PROCESS
-                || fd[handle].file == null)
-            return -1;
-        FileDescriptor fdw = fd[handle];
-        byte[] buf = new byte[bufsize];
-        int bytesRead = readVirtualMemory(vaddr, buf);
-        int retval = fdw.file.write(fdw.position, buf, 0, bytesRead);
-
-        if(retval < 0) 
-            return -1;
-        else {
-            fdw.position = fdw.position + retval;
-            return retval;
-        }*/
-
         // from han
         int fileDescriptor = a0;
         int pBuffer = a1;
@@ -1123,6 +880,7 @@ public class UserProcess {
             case syscallUnlink: //proj2.1
                 System.out.println("syscallUnlink");
                 handleUnlink(a0);
+                break;
             default:
                 Lib.debug(dbgProcess, "Unknown syscall " + syscall);
                 Lib.assertNotReached("Unknown system call!");
@@ -1160,25 +918,6 @@ public class UserProcess {
       	}
     }
 
-    // from thinkhy
-    // find the first empty position in FD array
-    /*private int findEmptyFileDescriptor() {
-        for (int i = 0; i < MAX_OPEN_FILES_PER_PROCESS; i++) {
-            if (fd[i].file == null) 
-                return i;
-        }
-        return -1;
-    }*/
-    // from thinkhy
-    // find the first empty position in FD array by filename
-    /*private int findFileDescriptorByName(String fileName) {
-        for (int i = 0; i < MAX_OPEN_FILES_PER_PROCESS; i++) {
-            if (fd[i].fileName == fileName)
-                return i;
-        }
-        return -1;
-    }*/
-
     /** The program being run by this process. */
     protected Coff coff;
 
@@ -1215,24 +954,4 @@ public class UserProcess {
     private boolean exitSuccess;
     private LinkedList<Integer> children = new LinkedList<Integer>(); // child process
     private UThread thread; // user thread that's associated with this process
-    // from thinkhy
-    /*public class FileDescriptor {
-        public FileDescriptor() {
-        }
-        private String fileName = ""; // opened file name
-        private OpenFile file = null; // opened file object
-        private int position = 0;     // IO position
-        private boolean toRemove = false; // if need to remove this file
-    }
-    public static final int STDIN = 0;
-    public static final int STDOUT =1;
-    public static final int ROOT = 1;
-    private FileDescriptor  fd[] = new FileDescriptor[MAX_OPEN_FILES_PER_PROCESS];
-    private int count_files = 0; // number of opened files
-    private int pid; // process id
-    private int ppid; // parent process's ID
-    private LinkedList<Integer> children = new LinkedList<Integer>(); // child process
-    private int exitStatus; // exit status
-    private UThread thread; // user thread that's associated with this process
-    */
 }
