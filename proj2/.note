@@ -1,0 +1,1 @@
+在StubFileSystem 里面把open() 方法里面的 delay() 删去了

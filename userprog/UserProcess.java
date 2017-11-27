@@ -56,7 +56,7 @@ public class UserProcess {
         this.openFiles[1] = UserKernel.console.openForWriting();
         // this.processID = processesCreated++;
         this.pid = processesCreated++;
-        // this.childrenCreated = new HashSet<Integer>();
+        this.childrenCreated = new HashSet<Integer>();
 
         // from thinkhy 
         /*for(int i = 0; i < MAX_OPEN_FILES_PER_PROCESS; i++) {
@@ -468,8 +468,8 @@ public class UserProcess {
      * Handle the halt() system call.
      */
     private int handleHalt() {
-      	Machine.halt();
-      	
+        System.out.println("handle - Hanlt.");
+        if (pid == 0) { Machine.halt(); }
         Lib.assertNotReached("Machine.halt() did not halt machine!");
       	return 0;
     }
@@ -597,7 +597,7 @@ public class UserProcess {
         Lib.assertNotReached();*/
     
         // from han & thinkhy
-
+        coff.close();
         // set any children of the process no longer have a parent process
         while (children != null && !children.isEmpty()) {
             int childPid = children.removeFirst();
@@ -613,16 +613,20 @@ public class UserProcess {
 
         // unloadSections
         this.unloadSections();
-
+        System.out.println("handle exit");
         // terminate kernel -- the last process
         if (pidThreadMap.size() == 1) {
+            System.out.println("handle - exit pidThreadMap.size = 1");
             Kernel.kernel.terminate();
+            // Machine.halt();
+        } else {
+            // remove processId from pidThreadMap
+            pidThreadMap.remove(this.pid);
+            processStatus = status;
+            exitSuccess = true;
+            UThread.finish();
         }
-        // remove processId from pidThreadMap
-        pidThreadMap.remove(this.pid);
-        processStatus = status;
-        exitSuccess = true;
-        UThread.finish();
+        Lib.assertNotReached();
     }
      /**
        *  Handle the unlink() system call
@@ -680,27 +684,56 @@ public class UserProcess {
         //         return fileHandle;
         //     }
         // }
+        // private int handleOpen(int fileAddress)
+        // {
+        // String filename=readVirtualMemoryString(fileAddress,256);//限定文件名长度
+        // if(filename==null)
+        // return -1;
+        // int fileDescriptor=findEmpty();
+        // if(fileDescriptor==-1)//为空，报错。
+        // return -1;
+        // else
+        // {
+        // openfile[fileDescriptor]=ThreadedKernel.fileSystem.open(filename,
+        // false);
+        // return fileDescriptor;
+        // }
+        // }
 
         // from han
-        final int fileDescriptor = this.getUnusedFileDescriptor();
+        
         int pName = a0;
+        System.out.println("open - pName file address = "+a0); 
 		final String fileName = readVirtualMemoryString(pName, MAX_FILENAME_LENGTH);
 		if (fileName == null || fileName.length() == 0) {
 			System.out.println("Invalid filename for open()");
 			return -1;
 		}
+        System.out.println("open filename = "+fileName);
+        final int fileDescriptor = this.getUnusedFileDescriptor();
+        System.out.println("open - get unused file descriptor = "+fileDescriptor);
+        if (fileDescriptor == -1) {
+            return -1;
+        } else {
+            System.out.println("open file - filename = "+fileName);
+            OpenFile file = ThreadedKernel.fileSystem.open(fileName, false);
+            System.out.println("open file - file = "+(file!=null));
+            if (file == null) {
+                System.out.println("Unable to open file: " + fileName);
+                System.out.println("Create a file: "+fileName);
+                this.handleCreate(a0);
+                // return -1;
+                return 0;
+            } else {
+                // Add this openFile to openFiles
+                this.openFiles[fileDescriptor] = file;
+                System.out.println("handleOpen - return fileDescriptor="+fileDescriptor);
+                // return the new fileDescriptor
+		        return fileDescriptor;
+            }
+            
+        }
 
-		final OpenFile file = ThreadedKernel.fileSystem.open(fileName, false);
-		if (file == null) {
-			System.out.println("Unable to open file: " + fileName);
-			return -1;
-		}
-
-		// Add this openFile to openFiles
-		this.openFiles[fileDescriptor] = file;
-
-		// return the new fileDescriptor
-		return fileDescriptor;
     }
     /**
      *  Handle the read() system call
@@ -789,6 +822,21 @@ public class UserProcess {
                 return fileHandle;
             }
         }*/
+        // private int handleCreate(int fileAddress)
+        // {
+        // String filename=readVirtualMemoryString(fileAddress,256);//限定文件名长度
+        // if(filename==null)
+        // return -1;
+        // int fileDescriptor=findEmpty();
+        // if(fileDescriptor==-1)
+        // return -1;
+        // else
+        // {
+        // openfile[fileDescriptor]=ThreadedKernel.fileSystem.open(filename,
+        // true);
+        // return fileDescriptor;
+        // }
+        // }
         final String fileName = readVirtualMemoryString(a0, MAX_FILENAME_LENGTH);
         // Is this fileName valid?
         if (fileName == null || fileName.length() == 0) {
@@ -803,15 +851,21 @@ public class UserProcess {
         // find an empty slot in the file descriptor table
         final int fileDescriptor = this.getUnusedFileDescriptor();
         // are we out of file descritptors?
-        final OpenFile file = ThreadedKernel.fileSystem.open(fileName,true);
-        // was the file successfully created?
-        if (file == null) {
-            System.out.println("Unable to create file: "+ fileName);
+        if (fileDescriptor == -1) {
+            System.out.println("we are out of file descriptors.");
+            return -1;
+        } else {
+            final OpenFile file = ThreadedKernel.fileSystem.open(fileName,true);
+            // was the file successfully created?
+            if (file == null) {
+                System.out.println("Unable to create file: "+ fileName);
+            }
+            // Add this openFile to OpenFiles
+            this.openFiles[fileDescriptor] = file;
+            // return the new fileDescriptor
+            return fileDescriptor;
         }
-        // Add this openFile to OpenFiles
-        this.openFiles[fileDescriptor] = file;
-        // return the new fileDescriptor
-        return fileDescriptor;
+       
     }
     /**
      * case syscallClose : return handleClose(a0);
@@ -930,7 +984,7 @@ public class UserProcess {
         for (int i = 0; i < this.openFiles.length; ++i) {
 			if (this.openFiles[i] == null) {
 				return i;
-			} // if
+			}
 		}
 		System.out.println("No file descriptors.");
 		return -1;
@@ -1036,42 +1090,42 @@ public class UserProcess {
     public int handleSyscall(int syscall, int a0, int a1, int a2, int a3) {
         Lib.debug(dbgProcess, "handleSyscall " + syscall);
         switch (syscall) {
-      	case syscallHalt:
-      	     return handleHalt(); // already implement
-        case syscallExit:
-             System.out.println("syscallExit");
-             handleExit(a0);
-             return 0;
-        case syscallExec:
-             System.out.println("syscallExec");
-             return handleExec(a0,a1,a2);
-        case syscallJoin:
-             System.out.println("syscallJoin");
-             return handleJoin(a0,a1);
-        case syscallCreate: //proj2.1
-             System.out.println("syscallCreate");
-             // the file argument is filename, hence a0
-             return handleCreate(a0); // create
-        case syscallOpen: //proj2.1
-             System.out.println("syscallOpen");
-             // the file argument is filename, hence a0
-             return handleOpen(a0);
-        case syscallRead: //proj2.1
-            //  System.out.println("syscallRead");
-             // need three argument a0:filename, a1:buf address, a2:buf size
-             return handleRead(a0,a1,a2);
-        case syscallWrite: //proj2.1
-            //  System.out.println("syscallWrite");
-             return handleWrite(a0,a1,a2);
-        case syscallClose: //proj2.1
-             System.out.println("syscallClose");
-             return handleClose(a0);
-        case syscallUnlink: //proj2.1
-             System.out.println("syscallUnlink");
-             handleUnlink(a0);
-      	default:
-      	    Lib.debug(dbgProcess, "Unknown syscall " + syscall);
-      	    Lib.assertNotReached("Unknown system call!");
+            case syscallHalt:
+                return handleHalt(); // already implement
+            case syscallExit:
+                System.out.println("syscallExit");
+                handleExit(a0);
+                return 0;
+            case syscallExec:
+                System.out.println("syscallExec");
+                return handleExec(a0,a1,a2);
+            case syscallJoin:
+                System.out.println("syscallJoin");
+                return handleJoin(a0,a1);
+            case syscallCreate: //proj2.1
+                System.out.println("syscallCreate");
+                // the file argument is filename, hence a0
+                return handleCreate(a0); // create
+            case syscallOpen: //proj2.1
+                System.out.println("syscallOpen");
+                // the file argument is filename, hence a0
+                return handleOpen(a0);
+            case syscallRead: //proj2.1
+                // System.out.println("syscallRead"); 轮循，不停执行 syscallRead
+                // need three argument a0:filename, a1:buf address, a2:buf size
+                return handleRead(a0,a1,a2);
+            case syscallWrite: //proj2.1
+                // System.out.println("syscallWrite");
+                return handleWrite(a0,a1,a2);
+            case syscallClose: //proj2.1
+                System.out.println("syscallClose");
+                return handleClose(a0);
+            case syscallUnlink: //proj2.1
+                System.out.println("syscallUnlink");
+                handleUnlink(a0);
+            default:
+                Lib.debug(dbgProcess, "Unknown syscall " + syscall);
+                Lib.assertNotReached("Unknown system call!");
       	}
       	return 0;
     }

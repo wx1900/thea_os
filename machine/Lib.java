@@ -14,11 +14,11 @@ import java.util.Random;
  */
 class AssertionFailureError extends Error {
     AssertionFailureError() {
-	super();
+    	super();
     }
 
     AssertionFailureError(String message) {
-	super(message);
+    	super(message);
     }
 }
 
@@ -40,8 +40,8 @@ public final class Lib {
      * @param	randomSeed	the seed for the random number generator.
      */
     public static void seedRandom(long randomSeed) {
-	assertTrue(random == null);
-	random = new Random(randomSeed);
+    	assertTrue(random == null);
+    	random = new Random(randomSeed);
     }
     
     /**
@@ -53,8 +53,8 @@ public final class Lib {
      * @return	a random integer in the specified range.
      */
     public static int random(int range) {
-	assertTrue(range > 0);
-	return random.nextInt(range);
+    	assertTrue(range > 0);
+    	return random.nextInt(range);
     }
 
     /**
@@ -63,7 +63,7 @@ public final class Lib {
      * @return	a random double between 0.0 and 1.0.
      */
     public static double random() {
-	return random.nextDouble();
+    	return random.nextDouble();
     }
 
     /**
@@ -73,8 +73,11 @@ public final class Lib {
      * @param	expression	the expression to assert.
      */     
     public static void assertTrue(boolean expression) {
-	if (!expression)
-	    throw new AssertionFailureError();
+    	if (!expression) {
+            System.out.println("Lib - assertTrue() throw new AssertionFailueError()");
+            throw new AssertionFailureError();
+        }
+    	    
     }
 
     /**
@@ -85,15 +88,18 @@ public final class Lib {
      * @param	message		the error message.
      */     
     public static void assertTrue(boolean expression, String message) {
-	if (!expression)
-	    throw new AssertionFailureError(message);
+    	if (!expression) {
+            System.out.println("Lib - assertTrue() throw new AssertionFailueError() message="+message);
+            throw new AssertionFailureError(message);
+        }
+	       
     }
 
     /**
      * Asserts that this call is never made. Same as <tt>assertTrue(false)</tt>.
      */
     public static void assertNotReached() {
-	assertTrue(false);
+	    assertTrue(false);
     }
     
     /**
@@ -103,7 +109,7 @@ public final class Lib {
      * @param	message	the error message.
      */
     public static void assertNotReached(String message) {
-	assertTrue(false, message);
+	    assertTrue(false, message);
     }
     
     /**
@@ -122,8 +128,8 @@ public final class Lib {
      * @param	message	the debug message.
      */
     public static void debug(char flag, String message) {
-	if (test(flag))
-	    System.out.println(message);
+    	if (test(flag))
+    	    System.out.println(message);
     }
 
     /**
@@ -134,14 +140,14 @@ public final class Lib {
      * @return	<tt>true</tt> if this flag was enabled on the command line.
      */
     public static boolean test(char flag) {
-	if (debugFlags == null)
-	    return false;
-	else if (debugFlags[(int) '+'])
-	    return true;
-	else if (flag >= 0 && flag < 0x80 && debugFlags[(int) flag])
-	    return true;
-	else
-	    return false;
+        if (debugFlags == null)
+            return false;
+        else if (debugFlags[(int) '+'])
+            return true;
+        else if (flag >= 0 && flag < 0x80 && debugFlags[(int) flag])
+            return true;
+        else
+            return false;
     }
 
     /**
@@ -150,15 +156,15 @@ public final class Lib {
      * @param	flagsString	the flags to enable.
      */
     public static void enableDebugFlags(String flagsString) {
-	if (debugFlags == null)
-	    debugFlags = new boolean[0x80];
+        if (debugFlags == null)
+            debugFlags = new boolean[0x80];
 
-	char[] newFlags = flagsString.toCharArray();
-	for (int i=0; i<newFlags.length; i++) {
-	    char c = newFlags[i];
-	    if (c >= 0 && c < 0x80)
-		debugFlags[(int) c] = true;
-	}
+        char[] newFlags = flagsString.toCharArray();
+        for (int i=0; i<newFlags.length; i++) {
+            char c = newFlags[i];
+            if (c >= 0 && c < 0x80)
+            debugFlags[(int) c] = true;
+        }
     }
 
     /** Debug flags specified on the command line. */
@@ -176,10 +182,10 @@ public final class Lib {
      */
     public static void strictReadFile(OpenFile file, int position,
 				      byte[] buf, int offset, int length) {
-	long startTime = Machine.timer().getTime();
-	assertTrue(file.read(position, buf, offset, length) == length);
-	long finishTime = Machine.timer().getTime();
-	assertTrue(finishTime>startTime);	
+        long startTime = Machine.timer().getTime();
+        assertTrue(file.read(position, buf, offset, length) == length);
+        long finishTime = Machine.timer().getTime();
+        assertTrue(finishTime>startTime);	
     }
 
     /**
@@ -190,22 +196,22 @@ public final class Lib {
      *		<tt>null</tt> if an error occurred.
      */
     public static byte[] loadFile(OpenFile file) {
-	int startOffset = file.tell();
+        int startOffset = file.tell();
 
-	int length = file.length();
-	if (length < 0)
-	    return null;
+        int length = file.length();
+        if (length < 0)
+            return null;
 
-	byte[] data = new byte[length];
+        byte[] data = new byte[length];
 
-	file.seek(0);
-	int amount = file.read(data, 0, length);
-	file.seek(startOffset);
+        file.seek(0);
+        int amount = file.read(data, 0, length);
+        file.seek(startOffset);
 
-	if (amount == length)
-	    return data;
-	else
-	    return null;
+        if (amount == length)
+            return data;
+        else
+            return null;
     }
 
     /**
@@ -215,11 +221,11 @@ public final class Lib {
      * @return	a read-only snapshot of the file.
      */
     public static OpenFile cloneFile(OpenFile file) {
-	OpenFile clone = new ArrayFile(loadFile(file));
+        OpenFile clone = new ArrayFile(loadFile(file));
 
-	clone.seek(file.tell());
-	
-	return clone;
+        clone.seek(file.tell());
+        
+        return clone;
     }
 
     /**
@@ -230,8 +236,8 @@ public final class Lib {
      * @param	value	the value to convert.
      */
     public static void bytesFromShort(byte[] array, int offset, short value) {
-	array[offset+0] = (byte) ((value>>0)&0xFF);
-	array[offset+1] = (byte) ((value>>8)&0xFF);
+    	array[offset+0] = (byte) ((value>>0)&0xFF);
+	    array[offset+1] = (byte) ((value>>8)&0xFF);
     }
 
     /**
@@ -242,10 +248,10 @@ public final class Lib {
      * @param	value	the value to convert.
      */
     public static void bytesFromInt(byte[] array, int offset, int value) {
-	array[offset+0] = (byte) ((value>>0) &0xFF);
-	array[offset+1] = (byte) ((value>>8) &0xFF);
-	array[offset+2] = (byte) ((value>>16)&0xFF);
-	array[offset+3] = (byte) ((value>>24)&0xFF);
+	    array[offset+0] = (byte) ((value>>0) &0xFF);
+    	array[offset+1] = (byte) ((value>>8) &0xFF);
+    	array[offset+2] = (byte) ((value>>16)&0xFF);
+    	array[offset+3] = (byte) ((value>>24)&0xFF);
     }
 
     /**
@@ -256,9 +262,9 @@ public final class Lib {
      * @return	an array containing the byte string.
      */
     public static byte[] bytesFromInt(int value) {
-	byte[] array = new byte[4];
-	bytesFromInt(array, 0, value);
-	return array;
+	    byte[] array = new byte[4];
+    	bytesFromInt(array, 0, value);
+    	return array;
     }
 
     /**
@@ -272,19 +278,19 @@ public final class Lib {
      */
     public static void bytesFromInt(byte[] array, int offset,
 				    int length, int value) {
-	assertTrue(length==1 || length==2 || length==4);
+	    assertTrue(length==1 || length==2 || length==4);
 
-	switch (length) {
-	case 1:
-	    array[offset] = (byte) value;
-	    break;
-	case 2:
-	    bytesFromShort(array, offset, (short) value);
-	    break;
-	case 4:
-	    bytesFromInt(array, offset, value);
-	    break;
-	}
+    	switch (length) {
+        	case 1:
+        	    array[offset] = (byte) value;
+        	    break;
+	        case 2:
+	            bytesFromShort(array, offset, (short) value);
+	            break;
+        	case 4:
+        	    bytesFromInt(array, offset, value);
+        	    break;
+    	}
     }
 
     /**
@@ -295,8 +301,8 @@ public final class Lib {
      * @return	the corresponding short value.
      */
     public static short bytesToShort(byte[] array, int offset) {
-	return (short) ((((short) array[offset+0] & 0xFF) << 0) |
-			(((short) array[offset+1] & 0xFF) << 8));
+    	return (short) ((((short) array[offset+0] & 0xFF) << 0) |
+    			(((short) array[offset+1] & 0xFF) << 8));
     }
 
     /**
@@ -308,7 +314,7 @@ public final class Lib {
      * @return	the corresponding short value.
      */
     public static int bytesToUnsignedShort(byte[] array, int offset) {
-	return (((int) bytesToShort(array, offset)) & 0xFFFF);
+    	return (((int) bytesToShort(array, offset)) & 0xFFFF);
     }
 
     /**
@@ -482,6 +488,7 @@ public final class Lib {
      */
     public static Class loadClass(String className) {
 	try {
+        System.out.println("ThreadedKernel - loadClass className = "+className);
 	    return ClassLoader.getSystemClassLoader().loadClass(className);
 	}
 	catch (Throwable e) {
@@ -520,7 +527,7 @@ public final class Lib {
      * @param	superCls	the ancestor class.
      */
     public static void checkDerivation(Class<?> cls, Class<?> superCls) {
-	Lib.assertTrue(superCls.isAssignableFrom(cls));
+	    Lib.assertTrue(superCls.isAssignableFrom(cls));
     }
 
     /**
@@ -531,15 +538,15 @@ public final class Lib {
      * @param	parameterTypes	the list of parameters.
      */
     public static void checkConstructor(Class cls, Class[] parameterTypes) {
-	try {
-	    Lib.assertTrue(Modifier.isPublic(cls.getModifiers()) &&
-		       !Modifier.isAbstract(cls.getModifiers()));
-	    Constructor constructor = cls.getConstructor(parameterTypes);
-	    Lib.assertTrue(Modifier.isPublic(constructor.getModifiers()));
-	}
-	catch (Exception e) {
-	    Lib.assertNotReached();
-	}		       
+        try {
+            Lib.assertTrue(Modifier.isPublic(cls.getModifiers()) &&
+                !Modifier.isAbstract(cls.getModifiers()));
+            Constructor constructor = cls.getConstructor(parameterTypes);
+            Lib.assertTrue(Modifier.isPublic(constructor.getModifiers()));
+        }
+        catch (Exception e) {
+            Lib.assertNotReached();
+        }		       
     }
 
     /**

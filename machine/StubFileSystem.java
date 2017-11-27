@@ -26,15 +26,20 @@ public class StubFileSystem implements FileSystem {
 	      this.directory = directory;
     }
     public OpenFile open(String name, boolean truncate) {
-	    if (!checkName(name))
-            return null;
-
-	        delay();
-
+		// System.out.println("StubFileSystem - open()");
+	    if (!checkName(name)) {
+			// System.out.println("StubFileSystem - open() - !checkName");
+			return null;
+		}
+		// System.out.println("StubFileSystem - open() - check");
+	        // delay();
+		// System.out.println("StubFileSystem - open() - delay() ?");
       	try {
+			// System.out.println("StubFileSystem - open() - return new StubOpenFile()");
       	    return new StubOpenFile(name, truncate);
       	}
       	catch (IOException e) {
+			// System.out.println("StubFileSystem - open() - return null");
       	    return null;
       	}
     }
@@ -74,7 +79,7 @@ public class StubFileSystem implements FileSystem {
 	      StubOpenFile(final String name, final boolean truncate)
   	    throws IOException {
   	    super(StubFileSystem.this, name);
-
+		System.out.println("StubFileSystem - StubOpenFile");
   	    final File f = new File(directory, name);
 
   	    if (openCount == maxOpenFiles)

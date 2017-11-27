@@ -18,16 +18,20 @@ public class ThreadedKernel extends Kernel {
      * alarm, and enables interrupts. Creates a file system if necessary.
      */
     public void initialize(String[] args) {
+        System.out.println("ThreadedKernel - intializing");
         // set scheduler
         String schedulerName = Config.getString("ThreadedKernel.scheduler");
         scheduler = (Scheduler) Lib.constructObject(schedulerName);
 
         // set fileSystem
         String fileSystemName = Config.getString("ThreadedKernel.fileSystem");
-        if (fileSystemName != null)
+        if (fileSystemName != null){
+            System.out.println("ThreadedKernel - fileSystem - is ?");
             fileSystem = (FileSystem) Lib.constructObject(fileSystemName);
-        else if (Machine.stubFileSystem() != null)
+        } else if (Machine.stubFileSystem() != null) {
+            System.out.println("ThreadedKernel - fileSystem - is stubFilesystem");
             fileSystem = Machine.stubFileSystem();
+        }
         else
             fileSystem = null;
 

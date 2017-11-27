@@ -8,6 +8,7 @@ char buf[BUFSIZE];
 
 int main(int argc, char** argv)
 {
+  // printf("cat - \n");
   int fd, amount;
 
   if (argc!=2) {
