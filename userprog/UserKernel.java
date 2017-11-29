@@ -39,7 +39,7 @@ public class UserKernel extends ThreadedKernel {
     		public void run() { exceptionHandler(); }
     	    });
         
-        // from thinkhy -- modified by wx
+        // from thinkhy -- modified by wx              
         int numPhysPages = Machine.processor().getNumPhysPages(); //return the total number of physical pages
         // add all the physical pages to the physical page table (linked list)
         for (int i = 0; i < numPhysPages; i++) {
@@ -54,6 +54,7 @@ public class UserKernel extends ThreadedKernel {
     	// super.selfTest();
         // disable this to test for the phase2 temporally
 
+/*
     	System.out.println("Testing the console device. Typed characters");
     	System.out.println("will be echoed until q is typed.");
 
@@ -71,6 +72,8 @@ public class UserKernel extends ThreadedKernel {
     	while (c != 'q');
 
     	System.out.println("");
+*/ 
+// quick get into the shell for the phase2 temporally
         
     }
 
@@ -116,7 +119,7 @@ public class UserKernel extends ThreadedKernel {
      */
     public void run() {
     	super.run();   // threadedKernel.run() // empty method
-        // create user thread
+        // create userProcess
     	UserProcess process = UserProcess.newUserProcess();
         // shellProgram = halt.coff or sh.coff
     	String shellProgram = Machine.getShellProgramName();
@@ -150,7 +153,7 @@ public class UserKernel extends ThreadedKernel {
 
     public static void addFreePage(int pageNumber) {
         // make sure the pageNumber is leagal
-        Lib.assertTrue(pageNumber>=0 && pageNumber < Machine.processor().getNumPhysPages());
+        Lib.assertTrue(pageNumber >= 0 && pageNumber < Machine.processor().getNumPhysPages());
         Machine.interrupt().disable();
         // add the pageNumber to the end of physPageTable  
         physPageTable.add(pageNumber);

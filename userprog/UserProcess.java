@@ -29,7 +29,7 @@ public class UserProcess {
      */
     public UserProcess() {
 
-        int numPhysPages = Machine.processor().getNumPhysPages();
+        int numPhysPages = Machine.processor().getNumPhysPages(); // changed to 8 in nachos.conf
         pageTable = new TranslationEntry[numPhysPages]; // size = numPhysPages just envelope of vpn&ppn&... 
         for (int i = 0; i < numPhysPages; i++) {
             // create default pageTable vpn = ppn
@@ -40,12 +40,12 @@ public class UserProcess {
         // so logical page number equal to physical page number
 
         // page structure:
-        // vpn the virtual page number
-        // ppn the physical page number
-        // valid the valid bit
-        // readOnly the read-only bit
-        // used the used bit
-        // dirty the dirty bit
+        // vpn : the virtual page number
+        // ppn : the physical page number
+        // valid : the valid bit
+        // readOnly:  the read-only bit
+        // used : the used bit
+        // dirty : the dirty bit
 
         // Processor.translate() implement the translation from virtual and reality
         // UserProcess.restoreState() pass pageTable to CPU
@@ -56,6 +56,7 @@ public class UserProcess {
         this.openFiles[1] = UserKernel.console.openForWriting();
         // this.processID = processesCreated++;
         this.pid = processesCreated++;
+        // child process created by this process
         this.childrenCreated = new HashSet<Integer>();
     }
 
@@ -122,8 +123,9 @@ public class UserProcess {
      *		found.
      */
     public String readVirtualMemoryString(int vaddr, int maxLength) {
+        // System.out.println("readVirtualMemoryString -- right?");  // the error is not here
       	Lib.assertTrue(maxLength >= 0);
-
+        // System.out.println("readVirtualMemoryString -- right !");
       	byte[] bytes = new byte[maxLength+1];
 
       	int bytesRead = readVirtualMemory(vaddr, bytes);
@@ -169,7 +171,10 @@ public class UserProcess {
      */
     public int readVirtualMemory(int vaddr, byte[] data, int offset,
 				 int length) {
+        // System.out.println("readVirtualMemory - data length = " + data.length); // the error is not here
+        // make sure the data length is leagal
       	Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
+        // System.out.println("readVirtualMemory - data length is leagal");
         // from thinkhy -- modified by wx
         Processor processor = Machine.processor();
       	byte[] memory = Machine.processor().getMemory(); // return the mainmemory an array
@@ -240,8 +245,9 @@ public class UserProcess {
      */
     public int writeVirtualMemory(int vaddr, byte[] data, int offset,
 				  int length) {
+        // System.out.println("wirteVirtualMemory -- data.length "+data.length); // here cannot be test
       	Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
-        
+        // System.out.println("writeVirtualMemory -- data.length  is leagal");
         // from thinkhy
         Processor processor = Machine.processor();
       	byte[] memory = Machine.processor().getMemory();
@@ -355,7 +361,7 @@ public class UserProcess {
 
       	this.argc = args.length;
       	this.argv = entryOffset;
-
+    
       	for (int i=0; i<argv.length; i++) {
       	    byte[] stringOffsetBytes = Lib.bytesFromInt(stringOffset);
       	    Lib.assertTrue(writeVirtualMemory(entryOffset,stringOffsetBytes) == 4);
