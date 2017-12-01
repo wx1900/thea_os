@@ -1,29 +1,30 @@
 package nachos.userprog;
 
+import java.util.*;
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
 
-import java.util.LinkedList;
-import java.util.Iterator;
-import java.util.HashMap;
-
-// phase2 - ii
-// come up with a way allocate machine's physical memory
-// allocate a fixed number of pages for the process'work
-// 8 pages should be sufficient
-// maintain a global linked list of free physical pages
-// should be effecinet ; not continous but have gaps
-
 /**
  * A kernel that can support multiple user processes.
  */
+
+ /**
+  * phase2 - ii
+  * come up with a way allocate machine's physical memory
+  * allocate a fixed number of pages for the process'work
+  * 8 pages should be sufficient
+  * maintain a global linked list of free physical pages
+  * should be effecinet ; not continous but have gaps
+  */
+
+
 public class UserKernel extends ThreadedKernel {
     /**
      * Allocate a new user kernel.
      */
     public UserKernel() {
-	       super();
+	    super();
     }
 
     /**
@@ -31,33 +32,36 @@ public class UserKernel extends ThreadedKernel {
      * processor's exception handler.
      */
     public void initialize(String[] args) {
-    	super.initialize(args);
-
-    	console = new SynchConsole(Machine.console());
-
-    	Machine.processor().setExceptionHandler(new Runnable() {
-    		public void run() { exceptionHandler(); }
-    	    });
+        // initialize the kernel
+        super.initialize(args);
+        // create a synchronized console -- Amazing!
+        console = new SynchConsole(Machine.console());
+        // set the processor's exception handler
+        Machine.processor().setExceptionHandler(new Runnable() {
+            public void run() { exceptionHandler(); }
+            });
         
-        // from thinkhy -- modified by wx
-        int numPhysPages = Machine.processor().getNumPhysPages(); //return the total number of physical pages
-        // add all the physical pages to the physical page table (linked list)
-        for (int i = 0; i < numPhysPages; i++) {
-            physPageTable.add(i);
-        }
-    }
+        // initialize the memoryLinkedList
+        memoryLinkedList=new LinkedList();  
+        // add memoryPageNum to memoryLinkedList
+        // initialize as continous num but change along memory allocate
+        // hence memory pages will have gaps 
+        for(int i=0;i<Machine.processor().getNumPhysPages();i++)
+            memoryLinkedList.add((Integer)i);      
+        // initialize memory allocate Lock
+        allocateMemoryLock=new Lock();
+	}
 
     /**
      * Test the console device.
-     */
+     */	
     public void selfTest() {
-    	// super.selfTest();
+	    // super.selfTest();
         // disable this to test for the phase2 temporally
-
+/*
     	System.out.println("Testing the console device. Typed characters");
     	System.out.println("will be echoed until q is typed.");
 
-        
     	char c;
 
     	do {
@@ -70,8 +74,9 @@ public class UserKernel extends ThreadedKernel {
     	}
     	while (c != 'q');
 
-    	System.out.println("");
-        
+        System.out.println("");
+*/
+// diable this part for quick access to shell
     }
 
     /**
@@ -80,10 +85,10 @@ public class UserKernel extends ThreadedKernel {
      * @return	the current process, or <tt>null</tt> if no process is current.
      */
     public static UserProcess currentProcess() {
-    	if (!(KThread.currentThread() instanceof UThread))
-    	    return null;
-
-    	return ((UThread) KThread.currentThread()).process;
+        if (!(KThread.currentThread() instanceof UThread))
+            return null;
+        
+        return ((UThread) KThread.currentThread()).process;
     }
 
     /**
@@ -100,11 +105,11 @@ public class UserKernel extends ThreadedKernel {
      * that caused the exception.
      */
     public void exceptionHandler() {
-    	Lib.assertTrue(KThread.currentThread() instanceof UThread);
+        Lib.assertTrue(KThread.currentThread() instanceof UThread);
 
-    	UserProcess process = ((UThread) KThread.currentThread()).process;
-    	int cause = Machine.processor().readRegister(Processor.regCause);
-    	process.handleException(cause);
+        UserProcess process = ((UThread) KThread.currentThread()).process;
+        int cause = Machine.processor().readRegister(Processor.regCause);
+        process.handleException(cause);
     }
 
     /**
@@ -115,92 +120,36 @@ public class UserKernel extends ThreadedKernel {
      * @see	nachos.machine.Machine#getShellProgramName
      */
     public void run() {
-    	super.run();   // threadedKernel.run() // empty method
-        // create user thread
-    	UserProcess process = UserProcess.newUserProcess();
-        // shellProgram = halt.coff or sh.coff
-    	String shellProgram = Machine.getShellProgramName();
-        // this user thread create a nachos user thread (UThread),
-        // this user thread create a child KThread to run shell through KThread
-    	Lib.assertTrue(process.execute(shellProgram, new String[] { }));
-
-    	KThread.currentThread().finish();
-        System.out.println("KThread.currentThread().finish() -- UserKernel.java run()");
-        // KThread main thread finished, and child thread implement shell
+        // empty method
+        super.run(); 
+        // The first (ROOT) User Process 
+        UserProcess process = UserProcess.newUserProcess();
+        String shellProgram = Machine.getShellProgramName();        
+        Lib.assertTrue(process.execute(shellProgram, new String[] { }));
+        // finish currentThread
+        KThread.currentThread().finish();
+        System.out.println("KThread.currentThread().finish() -- UserKernel.java run()");	
     }
 
     /**
      * Terminate this kernel. Never returns.
      */
     public void terminate() {
-	       super.terminate();
+	    super.terminate();
     }
-
-    // from thinkhy -- modified by wx
-    
-    public static int getFreePage() {
-        int pageNumber = -1;
-        Machine.interrupt().disable();
-        if (physPageTable.isEmpty() == false)
-            pageNumber = physPageTable.removeFirst();
-        // get first free physical page by remove it from physPageTable 
-        Machine.interrupt().enable();
-        return pageNumber;
-    }
-
-    public static void addFreePage(int pageNumber) {
-        // make sure the pageNumber is leagal
-        Lib.assertTrue(pageNumber>=0 && pageNumber < Machine.processor().getNumPhysPages());
-        Machine.interrupt().disable();
-        // add the pageNumber to the end of physPageTable  
-        physPageTable.add(pageNumber);
-        Machine.interrupt().enable();
-    }
-
-    public static int getNextPid() {
-        int retval;
-        Machine.interrupt().disable();
-        retval = ++ nextPid;
-        Machine.interrupt().enabled();
-        return nextPid;
-    }
-
-    public static UserProcess getProcessByID(int pid) {
-        return processMap.get(pid);
-    }
-
-    public static UserProcess registerProcess(int pid, UserProcess process) {
-        UserProcess insertedProcess;
-        Machine.interrupt().disable();
-        insertedProcess = processMap.put(pid, process);
-        Machine.interrupt().enable();
-        return insertedProcess;
-    }
-
-    public static UserProcess unregisterProcess(int pid) {
-        UserProcess deletedProcess;
-        Machine.interrupt().disable();
-        deletedProcess = processMap.remove(pid);
-        Machine.interrupt().enabled();
-        return deletedProcess;
-    }
-    
-    // 
-
-    // public static void deallocatePage(int a0){}
-    // public static int allocatePage(){return 0;}
-    
 
     /** Globally accessible reference to the synchronized console. */
     public static SynchConsole console;
 
     // dummy variables to make javac smarter
     private static Coff dummy1 = null;
-
-    // from thinkhy - modified by wx
-    // maintain a global linked list of free physical pages.
-    private static LinkedList<Integer> physPageTable = new LinkedList<Integer>();
-    private static int nextPid = 0;
-    private static HashMap<Integer, UserProcess> processMap = new HashMap<Integer, UserProcess>();
+    // memory allocate lock
+    public static Lock allocateMemoryLock;
+    // memory page linklist - store free memory pageNum
+    public static LinkedList<Integer> memoryLinkedList;
     
 }
+
+
+
+
