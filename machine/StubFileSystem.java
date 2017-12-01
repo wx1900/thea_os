@@ -32,7 +32,7 @@ public class StubFileSystem implements FileSystem {
 			return null;
 		}
 		// System.out.println("StubFileSystem - open() - check");
-	        // delay();
+	        delay();
 		// System.out.println("StubFileSystem - open() - delay() ?");
       	try {
 			// System.out.println("StubFileSystem - open() - return new StubOpenFile()");
