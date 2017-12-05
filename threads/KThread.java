@@ -151,7 +151,7 @@ public class KThread {
             });
 
         ready();
-        // 放入就绪队列
+        // put the thread in to ReadQueue
         Machine.interrupt().restore(intStatus);
     }
 
@@ -184,13 +184,13 @@ public class KThread {
     public static void finish() {
         Lib.debug(dbgThread, "Finishing thread: " + currentThread.toString());
         Machine.interrupt().disable();
-        //for join()
-        // 当 currentThread 结束的时候， 它的 joinQueue 里的thread 开始运行 
+        // for join()
+        // when currentThread finished, threads of its joinQueue start execute 
         ThreadQueue currentJoinQueue = currentThread.joinQueue; 
         if(currentJoinQueue != null) {
             KThread thread = currentJoinQueue.nextThread();
             while(thread!=null) {
-                thread.ready(); // 进入就绪队列
+                thread.ready(); // enter ReadyQueue
                 thread = currentJoinQueue.nextThread();
             }
         }
@@ -199,7 +199,7 @@ public class KThread {
         Lib.assertTrue(toBeDestroyed == null);
         toBeDestroyed = currentThread;
         currentThread.status = statusFinished;
-        sleep(); //终止的线程睡眠，等待撤销；同时引起线程调度
+        sleep(); //let finished thread sleep and invoke thread  scheduling
     }
 
     /**
@@ -420,19 +420,19 @@ public class KThread {
         // new PingTest(0).run();
 
         testJoin1();
-        // testJoin2(); //failed
-        testYB();
-        testPS();
+        // testJoin2(); // failed
+        // testYB();    // ignore this
+        // testPS();    // ignore this
     }
 
     public static void testJoin1() {
-        Lib.debug(dbgThread, "Enter KThread.sefTest1");
+        Lib.debug(dbgThread, "KThread sefTest1 start");
         KThread t = new KThread(new PingTest(1)).setName("t");
         t.fork();
         t.join();
         new PingTest(0).run();
     }
-
+/**
     public static void testYB(){
         KThread a = new KThread(new PingTest(1)).setName("a");
         KThread b = new KThread(new Runnable(){
@@ -449,9 +449,10 @@ public class KThread {
         b.join();
         new PingTest(0).run();
     }
-
+*/
+/**
     public static void testPS(){
-        boolean intStatus = Machine.interrupt().disable();//关中断，setPriority()函数中要求关中断
+        boolean intStatus = Machine.interrupt().disable();
         System.out.println("PriorityScheduler-selftest-begin");
         KThread t1 = new KThread(new PingTest(1)).setName("t1");
         KThread t2 = new KThread(new PingTest(2)).setName("t2");
@@ -466,6 +467,7 @@ public class KThread {
         System.out.println("PriorityScheduler-selftest-finished");
         Machine.interrupt().restore(intStatus);
     }
+    */
 // this not working actually
     // public static void testJoin2() {
     //     Lib.debug(dbgThread, "Enter KThread.selfTest2");
@@ -484,7 +486,7 @@ public class KThread {
     //     public void run() {
     //         for(int i = 0; i < 5; i++) {
     //             System.out.println("***thread "+which+" looped "+i+" times");
-    //             thread.join(); //等待线程Thread 结束
+    //             thread.join(); 
     //             currentThread.yield();
     //         }
     //     }

@@ -2,21 +2,564 @@
 
 edit - 10.11
 
-3. (10%, 40 lines)
+### proj1 
 
-   -  Complete the implementation of the `Alarm` class, by implementing the `waitUntil(long x)` method. 
-   -  A thread calls `waitUntil` to suspend its own execution until time has advanced to **at least now + x**. 
-   -  This is useful for threads that operate in real-time, for example, for blinking the cursor once per second. 
-   -  There is no requirement that threads start running immediately after waking up; just put them on the ready queue *in the timer interrupt handler* after they have waited for at least the right amount of time. 
-   -  Do not fork any additional threads to implement `waitUntil()`; **you need only modify `waitUntil()` and the timer interrupt handler.**  
-   -  `waitUntil` is not limited to one thread; **any number of threads** may call it and be suspended at any one time.      <u>put a waiting queue in this class</u>
+#### 下载和配置
+
+下载解压到自定义的文件目录；
+
+下载 jdk ;
+
+下载　MIPS Cross-compilers　并配置环境便量
+
+测试是否配置好，在　nachos/proj1 目录下输入　java nachos.machine.Machine $*
+
+<!--由于配置nachos失败，直接执行上述操作启动程序-->
+
+### 阅读向导和源码
+
+<!--阅读源码的部分比较长，分解到各个项目中-->
+
+- what is Nachos?
+
+  - Nachos 是一个教学用的操作系统，包括一个真实的操作系统的许多方面，线程，中断系统，虚拟内存，由中断驱动的I/O，网络接口，计时器，MIPS处理器等．
+  - 基于Java实现的Nachos在JVM之上，模拟了一个计算机的硬件系统包括CPU、中断控制器、定时器、网卡、内存、文件系统等. 然后模拟了一个在这些硬件之上运行的操作系统
+  - An instructional operating system
+  - includes many facets of a real OS:
+    - Threads
+    - Interrupts
+    - Virtual Memory
+    - I/O driven by interrupts
+  - Contains some hardware simulation
+    - MIPS processor
+      - Can handle MIPS code in standard COFF, except for floating point instructions
+    - Console
+    - Network interface
+    - TImer
+
+- History of Nachos
+
+  - Originally created at Berkeley in 1992 in C++ By Wayne A. Christopher, Steven J. Procter, and Tomas E. Anderson
+  - Rewritten in Java by Daniel Hettena
+
+- How does Nachos work?
+
+  - 启动过程：　启动nachos.machine.Machine.main, Machine.main 初始化设备：中断控制器，计时器，MIPS处理器，控制台，文件系统．然后把控制权交给autograder. AutoGrader 会创建一个内核，并启动它．TCB(线程控制块)
+
+  - ```java
+    // nachos.machine.Machine.main
+    processArgs(); //　处理nachos的命令行参数
+    Config.load(nachos.confg) //configFileName是目录proj1, 或proj2 中的配置文件nachos.conf 
+      // 读nachos.conf 的内容到名为machine.Config类创建的hash表中，供createDevices()使用
+    createDevices() //　根据Config.load(configFileName)中读入的nachos.conf的参数构造相应的模拟设备
+    checkUserClasses() //利用java类的反射(reflection)机制检查相应类及方法的完整性
+      // 类似于操作系统加载时对要加载的模块进行检查
+    new TCB().start(new Runnable() {
+        	    public void run() { autoGrader.start(privilege); }
+        	});
+    ```
+
+  - ```java
+    //autoGrader.start()
+    kernel = (Kernel) Lib.constructObject(Config.getString("Kernel.kernel"));
+    kernel.initialize(args);　//初始化Ｎachos,创建就绪队列，创建主线程及idle
+    run();
+    //**************************************************************************
+    void run() {
+      kernel.selfTest();
+      kernel.run();
+      kernel.terminate();
+    }
+    ```
+
+  - 对于proj1 Kernel.kernel = nachos.threads.ThreadedKernel
+
+  - 所以我们可以把测试代码写在 ThreadedKernel 的 selfTest() 里面
+
+  - 对于proj2 可以在ＵserKernel 的 selfTest()里面写测试
+
+  - ```java
+    #// nachos.conf -- proj2
+    Machine.stubFileSystem = true
+    Machine.processor = true
+    Machine.console = true
+    Machine.disk = false
+    Machine.bank = false
+    Machine.networkLink = false
+    Processor.usingTLB = false
+    Processor.numPhysPages = 64
+    ElevatorBank.allowElevatorGUI = false
+    NachosSecurityManager.fullySecure = false
+    ThreadedKernel.scheduler = nachos.threads.LotteryScheduler  #nachos.threads.RoundRobinScheduler #
+    Kernel.shellProgram = sh.coff #halt.coff
+    Kernel.processClassName = nachos.userprog.UserProcess
+    Kernel.kernel = nachos.userprog.UserKernel
+    ```
+
+  - When you run Nachos, it starts in nachos.machine.Machine.main
+
+  - Machine.main initializes devices - interrupt controller, timer, MIPS processor, console, file system
+
+  - Passes control to the autograder.
+
+  - AutoGrader will create a kernel and start it (this starts the OS)
+
+- **Machine** 
+
+  - 启动系统，并提供对各种硬件设备的访问
+  - nachos.machine.Machine
+  - Kicks off the system, and provides access to various hardware devices:
+    - Machine.interrupt()
+    - Machine.timer()
+    - Machine.console()
+    - Machine.networkLInk()
+
+- **Interrupt Controller**
+
+  - 启动硬件中断，管理一个事件队列
+  - 时钟：　one tick 执行MIPS指令　10 ticks 重新启用中断
+  - 每个tick之后，中断控制器检查待处理的中断，并运行它们
+  - 调用设备事件处理器，而不是软件中断处理程序
+  - 所有的硬件设备都依赖于中断，它们没有单独的线程
+  - Kicks off hardware interrupts
+  - nachos.machine.Interrupts class
+    - maintains an event queue, clock
+  - Clock ticks under two conditions:
+    - One tick for executing a MIPS instruction
+    - Ten ticks for re-enabling interrupts
+  - After any tick, Interrupt checks for pending interrupts, and runs them
+  - Calls device event handler, not software interrupt handler
+  - Important methods, accessible to other hardware simulation devices:
+    - scheduler() takes a time, handler
+    - tick() takes a boolean(1 or 10 ticks)
+    - checkIfDue() invokes due interrupts
+    - enable()
+    - disable()
+  - All hardware devices depend on interrupts - **they don't get threads**
+
+- **Timer**
+
+  - 硬件设备约每 500 ticks 引起中断
+  - 提供抢占操作
+  - nachos.machine.TImer
+  - Hardware device causes interrupts about every 500 ticks (not exact)
+  - Important methods:
+    - getTImer() tells many ticks so far
+    - setInterruptHandler() tells the timer what to do when it goes off
+  - Provides preemption (抢占)
+
+- **Serial Console**
+
+  - 控制台　接口　读写字符
+  - StadardConsole 实现 SerialConsole 的接口，
+  - Java interface nachos.machine.SerialConsole
+  - Contains methods:
+    - readByte() return one byte (or -1) and waits to interrupts when it has more
+    - writeByte() takes one byte and waits to interrupt when its ready for more
+    - setInterruptHandlers() tells the consoloe who to call when it receives data or finishes sending data
+  - Normally implemented by nachos.machine.StandardConsole , hooked up to stdin and stdout
+
+- **The Kernel**
+
+  - Abstract class nachos.machine.Kernel
+  - Important methods
+    - initialize() initializes the kernel
+    - selfTest() performs test (not used by ag)
+    - run() runs any user code (none for 1st phase)
+    - terminate() Game over. Never returns. hhh
+  - Each Phase will have its own Kernel subclass
+
+- **Threading**
+
+  - nachos.threads
+  - All Nachos threads are instances of nachos.thread.KThread (or subclass)
+  - KThread has status
+    - New, Ready, Running, Blocked, Finished
+  - Every KThread also has a nachos.machine.TCB
+  - Internally implemented by Java threads
+
+- Scheduler
+
+  - some subclass of nachos.machine.Scheduler
+  - Create ThreadQueue objects which decide what thread to run next
+
+- Nachos Configuraion
+
+  - nachos.conf file lets you specify many options
+    - which class to use for Kernel, Scheduler
+    - whether to be able to run user progs
+
+- userprog
+
+  - UserProcess
+    - 一个Kthread对象对应一个Ｎachos核心线程
+    - 一个ＵserProcess对象对应一个Nachos用户进程
+    - 一个Uthread对象对应一个Ｎachos用户线程
+    - UserProcess实现将用户程序从文件系统加载到该用户进程，并在进程中创建一个用户线程以执行用户程序的代码
+    - 同时为用户提供系统调用等服务
+    - machine.Processor类模拟了nachos的CPU,以及CPU执行MIPS指令的过程
+
+- File system
+
+  - machine/FileSystem.java  
+    - file system
+  - machine/OpenFile.java
+    - a nachos file(opened), 类似于java的File
+  - machine/StubFileSystem.java
+    - 对OpenFile, FileSystem 方法的具体实现
+    - 文件的open() 是基于java的RandomAccessFile实现的，其余的read, write, close等都是基于java的File类实现的．
+  - machine/StandardConsole.java
+    - 利用java的System.in与System.out模拟了一个nachos控制台，模拟系统的键盘输入和文本输出
+
+- Nachos Command line Arguments
+
+  - -d <debug flags> 
+    - enable some debug flags, e.g. -d ti
+    - c: prints process loading information (COFF)
+    - i: HW interrupt controller info
+    - p: processor info
+    - m: MIPS disassembly
+    - M: more MIPS disassembly
+    - t: thread info
+    - a: process info
+  - -h
+    - print this help message
+  - -m <pages>
+    - Specify how many physical pages of memory to simulate
+  - -s <seed>
+    - Specify the seed for the random number generator
+  - -z
+    - print the copyright message
+  - -x <program>
+    - Specify a program that UserKernel.run() should execute, instead of the value of the configuration variable Kernel.shellProgram
+
+- Nachos 线程
+
+  - 一个KThread对象代表一个Nachos线程
+    - 线程的创建KThread.fork()
+    - 线程的就绪KThread.ready()
+    - 线程的睡眠KThread.sleep()
+    - 线程的状态与转换
+    - 线程的上下文切换
+  - 一个Ｎachos线程由三部分组成
+    - 一个KThread对象
+    - 与KThread 对象对应的TCB对象
+    - 与TCB对象绑定的JAVA线程
+  - 约束关系
+    - KThread.tcb -> TCB.javaThread->java Thread (new Thread(new Runnable))
+    - 线程的上述操作是在KThread对应的TCB中，通过java的相应操作具体实现的
+    - ​
+
+### 程序的题目要求分析及解答
+
+<!--为避免出现乱码，程序采用英文注释，在此文件中将添加一些中文解释-->
+
+> The first step is to read and understand the partial thread system we have written for you. This thread system implements thread fork, thread completion, and semaphores for synchronization. It also provides locks and condition variables built on top of semaphores.
+>
+> 第一步是阅读和理解我们为你写的部分线程系统。 这个线程系统实现了线程分叉，线程完成和信号量的同步。 它还提供了基于信号量构建的锁和条件变量。
+
+1. > (5%, 5 lines) Implement `KThread.join()`. Note that another thread does not have to call `join()`, but if it is called, it must be called only once. The result of calling `join()` a second time on the same thread is undefined, even if the second caller is a different thread than the first caller. A thread must finish executing normally whether or not it is joined.
+   >
+   > (5％）实现`KThread.join()`。 请注意，另一个线程不是必须调用join（），但是如果它被调用，它只能被调用一次。 即使第二个调用方是与第一个调用方不同的线程，第二个调用join（）的结果也是未定义的。 无论是否被join，一个线程都必须正常执行。
+
+   - 题目分析：
+
+     - t.join()的作用是等待调用此方法的线程(t)执行完(Wait for this thread to die)．
+     - join()函数只能被调用一次，第二次调用未定义．
+     - join()结束时唤醒在等待队列中的所有线程
+
+   - 方法及代码：
+
+     - 修改finish()
+
+       ```java
+       public static void finish() {
+               Lib.debug(dbgThread, "Finishing thread: " + currentThread.toString());
+               Machine.interrupt().disable();
+               //---------------------------------------------------------------------
+               // when currentThread finished, threads of its joinQueue start execute 
+               ThreadQueue currentJoinQueue = currentThread.joinQueue; 
+               if(currentJoinQueue != null) {
+                   KThread thread = currentJoinQueue.nextThread();
+                   while(thread!=null) {
+                       thread.ready(); // 唤醒等待队列上所有被阻塞的线程
+                       thread = currentJoinQueue.nextThread();
+                   }
+               }
+               //---------------------------------------------------------------------
+               Machine.autoGrader().finishingCurrentThread();
+               Lib.assertTrue(toBeDestroyed == null);
+               toBeDestroyed = currentThread;
+               currentThread.status = statusFinished;
+               sleep(); //终止的线程睡眠，等待撤销；同时引起线程调度
+           }
+       ```
+
+     - 修改join()
+
+       ```java
+       public void join() {
+               Lib.debug(dbgThread, "Joining to thread: " + toString());
+               Lib.assertTrue(this != currentThread);
+         //---------------------------------------------------------------------------
+               boolean intStatus = Machine.interrupt().disable();//系统关中断
+               if(this.joinQueue == null) {
+                   this.joinQueue = ThreadedKernel.scheduler.newThreadQueue(false);
+                   this.joinQueue.acquire(this);
+               }
+               if(currentThread != this && status != statusFinished) {
+                   this.joinQueue.waitForAccess(currentThread);
+                   currentThread.sleep();//当前线程等待被调用线程结束
+               }
+               Machine.interrupt().restore(intStatus);
+         //---------------------------------------------------------------------------
+           }
+       ```
+
+     - 测试selfTest()
+
+       ```java
+       public static void testJoin1() {
+               Lib.debug(dbgThread, "KThread sefTest1 start");
+               KThread t = new KThread(new PingTest(1)).setName("t");
+               t.fork();
+               t.join();
+               new PingTest(0).run();
+           }
+       ```
+
+       ![proj1.1.png](proj1.1.png)
+
+          如上图结果所示，main线程等待t线程执行完之后再执行，完成了 t.join().
+
+2. > (5%, 20 lines) Implement condition variables directly, by using interrupt enable and disable to provide atomicity. We have provided a sample implementation that uses semaphores; your job is to provide an equivalent implementation without directly using semaphores (you may of course still use locks, even though they indirectly use semaphores). Once you are done, you will have two alternative implementations that provide the exact same functionality. Your second implementation of condition variables must reside in class `nachos.threads.Condition2`.
+   >
+   > 直接实现条件变量，通过使用中断启用和禁用来提供原子性。 我们提供了一个使用信号量的示例实现; 你的工作是提供一个没有直接使用信号量的等价的实现（你当然可以使用锁，即使它们间接使用信号量）。 一旦你完成了，你将有两个可供选择的实现提供完全相同的功能。 条件变量的第二个实现必须驻留在类nachos.threads.Condition2中。
+
+   - 题目分析
+
+     - 条件变量(Condition) 为一个线程暂停执行提供了一种方法，直到直到另一个线程通知现在某些状态条件成立为止．由于对共享状态信息的访问发生在不同的线程中，因此必须对其进行保护，以便某种形式的锁与条件相关联．它会自动释放关联的锁并暂停当前线程．
+
+   - 方法及代码
+
+     - 变量声明
+
+       ```java
+       private int value;
+       private String name;
+       private Lock conditionLock;
+       private ThreadQueue waitQueue =  ThreadedKernel.scheduler.newThreadQueue(false);
+       private LinkedList<Condition2> waitQueue_1;
+       ```
+
+     - sleep() - 在条件变量控制下，sleep()自动释放
+
+       ```java
+       public void sleep() {
+               Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+               
+               //　添加到等待队列
+               Lock lock1 = new Lock();
+               Condition2 waiter = new Condition2(lock1);
+               waitQueue_1.add(waiter);
+
+               conditionLock.release();
+               waiter.P();　// 调用KThread.sleep()使当前线程睡眠
+               conditionLock.acquire();
+           }
+       ```
+
+     - wake() - 唤醒等待队列中第一个线程
+
+       ```java
+       public void wake() {
+               Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+               if (!waitQueue_1.isEmpty())
+                   (waitQueue_1.removeFirst()).V();
+       }
+       ```
+
+     - wakeAll() - 调用wake()，唤醒等待队列中所有的线程
+
+       ```java
+        public void wakeAll() {
+               Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+               while (!waitQueue_1.isEmpty())
+                   wake();
+        }
+       ```
+
+     - P() - 使当前线程睡眠
+
+       ```java
+        public void P() {
+               boolean intStatus = Machine.interrupt().disable();
+               //　使当前线程睡眠
+               if (value == 0) {
+                   waitQueue.waitForAccess(KThread.currentThread());
+                   KThread.sleep();
+                   System.out.println("c + thread -" + KThread.currentThread().getName() +" sleep P " + this.getSName());
+               }
+               else {
+                   value--;
+               }
+
+               Machine.interrupt().restore(intStatus);
+           }
+       ```
+
+       ​
+
+     - V() - 将等待队列中的线程加入就绪队列
+
+       ```java
+        public void V() {
+               boolean intStatus = Machine.interrupt().disable();
+               //将等待队列中的线程加入就绪队列
+               KThread thread = waitQueue.nextThread();
+               if (thread != null) {
+                   thread.ready();
+                   System.out.println("c + thread -" + thread.getName() + " ready V " + this.getSName());
+               }
+               else {
+                   value++;
+               }
+               
+               Machine.interrupt().restore(intStatus);
+           }
+       ```
+
+       ​
+
+     - PingTest() - 该方法是为了便于测试
+
+       ```java
+       private static class PingTest implements Runnable {
+       		PingTest(Condition2 ping, Condition2 pong) {
+       			this.ping = ping; this.ping.setSName("PING");
+       			this.pong = pong; this.pong.setSName("PONG");
+       		}
+
+       		public void run() {
+       			for (int i=0; i<10; i++) {
+       				ping.P();　// sleep
+       				pong.V();  // ready 
+       			}
+       		}
+
+       		private Condition2 ping;
+       		private Condition2 pong;
+           }
+       ```
+
+     - selfTest()
+
+       ```java
+       public static void selfTest() {
+               System.out.println("Condition2 - selfTest - begin.");
+               
+               Lock lock1 = new Lock();
+               Lock lock2 = new Lock();
+       		Condition2 ping = new Condition2(lock1);
+       		Condition2 pong = new Condition2(lock2);
+
+       		new KThread(new PingTest(ping, pong)).setName("thea").fork();
+       		
+       		// main ready 
+       		// main sleep
+       		for (int i=0; i<10; i++) {
+       			ping.V(); // ready
+       			pong.P(); // sleep
+       		}
+
+       		System.out.println("Condition2 - selfTest - finished.");
+           }
+       ```
+
+       ​
+
+   - 测试及结果
+
+     ![](proj1.2.png)
 
    ​
+
+3. (10%, 40 lines)
+
+   -  Complete the implementation of the `Alarm` class, by implementing the `waitUntil(long x)` method. 通过waitUntil(long x)实现Ａlarm类．
+   -  A thread calls `waitUntil` to suspend its own execution until time has advanced to **at least now + x**.一个线程通过调用 waitUntil(long x)方法将自己挂起，一直到经过 x 时间再被唤醒。
+   -  This is useful for threads that operate in real-time, for example, for blinking the cursor once per second. 
+   -  There is no requirement that threads start running immediately after waking up; just put them on the ready queue *in the timer interrupt handler* after they have waited for at least the right amount of time. 线程经过至少x 时间后唤醒，但不需要立刻运行，而是加入 readyqueue 中。
+   -  Do not fork any additional threads to implement `waitUntil()`; **you need only modify `waitUntil()` and the timer interrupt handler.**  
+   -  `waitUntil` is not limited to one thread; **any number of threads** may call it and be suspended at any one time.      <u>put a waiting queue in this class</u>　waitUntil()　不受限于任何一个线程，
+      任何线程可以调用它实现被挂起。
 
    > 参考：
    >
    > - https://github.com/viturena/nachos/blob/master/threads/Alarm.java
    > - https://www.javatpoint.com/java-treemap
+
+   - 题目分析
+     - Alarm 类使用硬件定时器提供抢占，并允许线程挂起到某个时间．
+     - 定时器中断处理程序被成为机器计时器定期(大约每500时钟周期).
+     - 当前线程睡眠至少x时间周期，在定时器中断处理程序中将其唤醒．当现在时间(current times) >= (WaitUntil called time) + (x)时, 线程必须被唤醒（在中断产生时)．因为waitUntil()是至少x时间后唤醒，所以只需要满足睡眠时间大于x即可． 
+
+
+   - 方法及代码
+
+     - timerInterrupt() - 睡眠唤醒的实现．中断发生时，遍历waitingThread, 如果有线程的等待时间达到，将该线程放入就绪队列．
+
+       ```java
+       public void timerInterrupt() {
+               boolean intStatus = Machine.interrupt().disable();
+               
+               long current = Machine.timer().getTime();
+               // check the key
+               // it requests at least x time so this counts
+               // if firstKey() as the waketime is up then get ready
+               while (!waitingThread.isEmpty() && waitingThread.firstKey() <= current)
+                   waitingThread.pollFirstEntry().getValue().ready();
+               // Removes and returns a key-value mapping associated with the least key in this map, or null if the map is empty.
+               Machine.interrupt().restore(intStatus);
+
+               // Preempt current thread as normal
+               KThread.yield();
+           }
+       ```
+
+     - waitUntil()
+
+       ```java
+        public void waitUntil(long x) {
+               // for now, cheat just to get something working (busy waiting is bad)
+               boolean intStatus = Machine.interrupt().disable();
+               long wakeTime = Machine.timer().getTime() + x;
+               // Place current thread on a wait queue and put it to sleep
+               waitingThread.put(wakeTime, KThread.currentThread());
+               KThread.sleep();
+               Machine.interrupt().restore(intStatus);
+           }
+       ```
+
+     - 测试alarmTest()
+
+       ```java
+        public void alarmTest(long x) {
+               System.out.println("alarmTest-begin-"+Machine.timer().getTime()+" - test for - "+x);
+               alarm.waitUntil(x);
+               System.out.println("alarmTest-finished-"+Machine.timer().getTime());
+           }
+       ```
+
+   - 测试结果
+
+     ![](proj1.3.2.png)
+
+     alarmTest开始的时候时钟周期是10,　可能是因为kernelTick=10
+
+     ![](proj1.3.4.png)
+
+     timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可能是kernelTick
 
 4. (20%, 40 lines)
 
@@ -26,6 +569,20 @@ edit - 10.11
    -  Your solution should work even if there are multiple `speak`ers and `listen`ers for the same `Communicator` (note: this is equivalent to a zero-length bounded buffer; since the buffer has no room, the producer and consumer must interact directly, requiring that they wait for one another). Each communicator should only use exactly **one** lock. If you're using more than one lock, you're making things too complicated.
 
    > 参考：[deep_keng](http://blog.csdn.net/deep_kang/article/category/6570538)
+
+   - 题目分析
+
+     - 使用条件变量(Condition)实现信息的发送和接收
+     - 信息在线程之间传递以后，返回listen() 或者 speak()
+     - 对于同一个Communicator可以有多个speaker和listener．
+
+   - 方法及代码
+
+   - 测试结果
+
+     - 一个听者两个歌者
+
+     ![](proj1.4.1.png)
 
 5. (35%, 125 lines)
 
@@ -46,4 +603,74 @@ edit - 10.11
    Priority Donation Implementation Details:
    1) A thread's effective priority is calculated by taking the max of the donor's and the recipient's priority. If thread A with priority 4 donates to thread B with priority 2, then thread B's effective priority is now 4. Note that thread A's priority is also still 4. A thread that donates priority to another thread does not lose any of its own priority. For these reasons, the term "priority inheritance" is in many ways a more appropriate name than the term "priority donation".
    2) Priority donation is transitive. If thread A donates to thread B and then thread B donates to thread C, thread B will be donating its new effective priority (which it received from thread A) to thread C.
+
+<<<<<<< HEAD
+6.  划船
+
+
+## proj2 
+
+1. ​
+
+  ```c++
+  #include<cstdio>
+  ```
+
+  ​
+
+  =======
+
+## proj2
+
+1. create 
+2. open
+3. read
+4. write
+5. close
+6. unlink
+
+- UserKernel :
+
+```java
+// maintain a global linked list of free physical pages.
+private static LinkedList<Integer> physPageTable = new LinkedList<Integer>();
+// 用 physPageTable 来分配页表
+// 初始化链表 每个节点存一个数字（ i = 0 to size )
+// size = Machine.processor().getNumPhysPages();  {a fixed number of pages} should be 8
+// so change the numPhysPages in nachos.conf to 8
+// Processor.numPhysPages = 8
+// 操作：分配页表的第一个 removeFirst()
+// 操作：添加页表 添加到尾部 因此以后的链表中的数字会打乱顺序
+// 也就满足了题目要求中的 不连续 not continous but have gaps
+
+private static int nextPid = 0;
+// 用在 getNextPid() 
+private static HashMap<Integer, UserProcess> processMap = new HashMap<Integer, UserProcess>();
+// processMap (pid, process) 操作：注册/删除进程
+```
+
+- UserProcess:
+
+1.  public UserProcess () 
+
+```java
+int numPhysPages = Machine.processor().getNumPhysPages(); // changed to 8 in nachos.conf
+pageTable = new TranslationEntry[numPhysPages]; 
+
+// 初始化 pageTable
+for (int i = 0; i < numPhysPages; i++) {
+    // create default pageTable vpn = ppn
+    pageTable[i] = new TranslationEntry(i, i, true, false, false, false);
+}
+
+// openFiles 定义的是记录<打开文件信息>的一个数组
+this.openFiles = new OpenFile[MAX_OPEN_FILES_PER_PROCESS];
+this.openFiles[0] = UserKernel.console.openForReading();
+this.openFiles[1] = UserKernel.console.openForWriting();
+
+// 定义 本线程的 id 
+this.pid = processesCreated++;
+this.childrenCreated = new HashSet<Integer>();
+```
+>>>>>>> 4262d80e4401835e0490bcc4e419f680b289b74e
 

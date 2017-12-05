@@ -31,6 +31,9 @@ public final class Machine {
     	baseDirectory = new File(new File("").getAbsolutePath());
     	// get the nachos directory (./nachos)
     	nachosDirectory = new File(baseDirectory, "nachos");
+		/**if use java nachos.machine.Machine $* 
+		 * it seems the baseDirectory doesn't matter
+		 */
 
     	String testDirectoryName =
     	    Config.getString("FileSystem.testDirectory");

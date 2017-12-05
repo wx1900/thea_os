@@ -31,8 +31,8 @@ public class Alarm {
      */
     public void timerInterrupt() {
         boolean intStatus = Machine.interrupt().disable();
-        
         long current = Machine.timer().getTime();
+        // System.out.println("timerInterrupt - check - now - "+current);
         // check the key
         // it requests at least x time so this counts
         // if firstKey() as the waketime is up then get ready

@@ -9,7 +9,7 @@ import java.util.LinkedList;
  * basicly I took the code from semaphore and make it work directly here
  * using locks
  * this works fine since the code is almostly same
- * and I pust 'c + ' to mark the notation from this function
+ * and I put 'c + ' to mark the notation from this function
  */
 
 /**
@@ -59,6 +59,7 @@ public class Condition2 {
         waiter.P();
         conditionLock.acquire();
     }
+
 
     /**
      * Wake up at most one thread sleeping on this condition variable. The

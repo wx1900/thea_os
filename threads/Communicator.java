@@ -13,15 +13,15 @@ import java.util.LinkedList;
 public class Communicator {
 
     Lock lock;
-    
+
     private int speakerNum;
     private int listenerNum;
     
     private LinkedList<Integer> words;
     
     // use condition2 works fine
-    Condition2 listener;
-    Condition2 speaker;
+    Condition listener;
+    Condition speaker;
 
     /**
      * Allocate a new communicator.
@@ -32,8 +32,8 @@ public class Communicator {
         speakerNum = 0;
         listenerNum = 0;
         words = new LinkedList<Integer>();
-        listener = new Condition2(lock);
-        speaker = new Condition2(lock);
+        listener = new Condition(lock);
+        speaker = new Condition(lock);
     }
 
     /**
@@ -52,24 +52,18 @@ public class Communicator {
         
         // acuquire lock
         lock.acquire();
+        // add a speaker
+        speakerNum++;
 
-        // add word
-        words.add(word);
-
-        if(listenerNum == 0){
-            speakerNum++;
-            System.out.println("++++++++++++++No listener for now.  l=" + listenerNum + " s="+speakerNum);
+        while (!words.isEmpty() || listenerNum == 0)
             speaker.sleep();
-            System.out.println("++++++++++++++after speaker.sleep.  l=" + listenerNum + " s="+speakerNum);
-            listenerNum--;
-        }else{
-             speakerNum++;
-             System.out.println("+++++++++++++++we have listener!    l=" + listenerNum + " s="+speakerNum);
-             listener.wake();
-             System.out.println("+++++++++++++++after wake listener. l=" + listenerNum + " s="+speakerNum);
-             listenerNum--;
-        }
-        
+        // speaker says a word
+        words.addLast(word);
+       
+        // wake up all listeners
+        listener.wakeAll();
+
+        speakerNum--;
         
         lock.release();
 
@@ -87,46 +81,63 @@ public class Communicator {
         boolean preStatus = Machine.interrupt().disable();
 
         lock.acquire();
-
-        if(speakerNum==0){
-            listenerNum++;
-            System.out.println("--------------No speaker for now.   l=" + listenerNum + " s="+speakerNum);
+        // increase the number of listener by one
+        listenerNum++;
+        while (words.isEmpty()) {
+            speaker.wakeAll();
             listener.sleep();
-            System.out.println("--------------after listener.sleep. l=" + listenerNum + " s="+speakerNum);
-            speakerNum--;
-        }else{
-            listenerNum++;
-            System.out.println("---------------we have speaker!     l=" + listenerNum + " s="+speakerNum );
-            speaker.wake();
-            System.out.println("---------------after speaker.wake   l=" + listenerNum + " s="+speakerNum);
-            speakerNum--;   
         }
-        
+        // listener receives the word
+        int word = words.removeFirst();
+ 
+        // decrease listener number
+        listenerNum--;
+
         lock.release();
         
         Machine.interrupt().restore(preStatus);
         
-        return words.removeLast();
-	    // return 0;
+        // return words.removeLast();
+	    return word;
     }
 
     private static class Speaker implements Runnable {
 
         private Communicator c;
+        private int base = 0;
         
-        Speaker(Communicator c) {
+        Speaker (Communicator c, int base) {
             this.c = c;
+            this.base = base;
         }
         
         public void run() {
-            for (int i = 0; i < 10; ++i) {
-                System.out.println("speaker speaking *try to put* " + i);
+            for (int i = base; i < 5+base; ++i) {
+                // System.out.println("speaker speaking *try to put* " + i);
                 c.speak(i);
-                System.out.println("speaker spoken, word = " + i);
-                KThread.yield();
+                System.out.println(KThread.currentThread().getName() + " spoken,    word = " + i);
+                // KThread.yield();
             }
+            // c.speak(this.word);
         }
     }
+
+    private static class Listener implements Runnable {
+        Listener(Communicator c) {
+            this.c = c;
+        }
+        public void run() {
+            // int word = c.listen();
+            for (int i = 0; i < 10; ++i) {
+                // System.out.println("speaker speaking *try to put* " + i);
+                int word = c.listen();
+                System.out.println(KThread.currentThread().getName() + " listened, word = " + word);
+                // KThread.yield();
+            }
+        }
+        private Communicator c;
+    }
+
     public static void selfTest() {
 
         System.out.println("Communicator-selfTest-begin");
@@ -134,16 +145,28 @@ public class Communicator {
         Communicator c = new Communicator();
        
         // fork a new thread to speak
-        new KThread(new Speaker(c)).setName("Speaker").fork();
+        KThread speaker1 = new KThread(new Speaker(c, 0));
+        speaker1.setName("Speaker1").fork();
+        KThread.yield();
+        KThread speaker2 = new KThread(new Speaker(c, 100));
+        speaker2.setName("Speaker2").fork();
+        KThread.yield();
+        KThread listener1 = new KThread(new Listener(c));
+        listener1.setName("listener1").fork();
+        KThread.yield();
+        listener1.join();
+        speaker1.join();
+        speaker2.join();
         
         // use main thread to listen
+        /**
         for (int i = 0; i < 10; ++i) {
-            System.out.println("listener listening *try to get* " + i);
+            // System.out.println("listener listening *try to get* " + i);
             int x = c.listen();
             System.out.println("listener listened, word = " + x);
             KThread.yield();
         }
-
+        */
         System.out.println("Communicator-selfTest-finished");
     }
 }
