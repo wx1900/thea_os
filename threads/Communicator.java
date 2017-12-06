@@ -127,7 +127,6 @@ public class Communicator {
             this.c = c;
         }
         public void run() {
-            // int word = c.listen();
             for (int i = 0; i < 10; ++i) {
                 // System.out.println("speaker speaking *try to put* " + i);
                 int word = c.listen();
@@ -147,13 +146,14 @@ public class Communicator {
         // fork a new thread to speak
         KThread speaker1 = new KThread(new Speaker(c, 0));
         speaker1.setName("Speaker1").fork();
-        KThread.yield();
+        // KThread.yield();
         KThread speaker2 = new KThread(new Speaker(c, 100));
         speaker2.setName("Speaker2").fork();
-        KThread.yield();
+        // KThread.yield();
         KThread listener1 = new KThread(new Listener(c));
         listener1.setName("listener1").fork();
-        KThread.yield();
+      
+        // KThread.yield();
         listener1.join();
         speaker1.join();
         speaker2.join();

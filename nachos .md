@@ -578,9 +578,148 @@ edit - 10.11
 
    - 方法及代码
 
+     - 变量定义
+
+       ```java
+          Lock lock; //只使用一个锁
+          private int speakerNum;　//歌者的个数
+          private int listenerNum;　//听者的个数    
+          private LinkedList<Integer> words;//传递消息的链表  
+          Condition listener;//　听者的条件变量
+          Condition speaker;//　歌者的条件变量
+       ```
+
+     - speak()
+
+       ```java
+        public void speak(int word) {
+               // disable interrupt
+               boolean preStatus = Machine.interrupt().disable();
+               
+               // acuquire lock
+               lock.acquire();
+               // add a speaker
+               speakerNum++;
+
+               while (!words.isEmpty() || listenerNum == 0)
+                   speaker.sleep();
+               // speaker says a word
+               words.addLast(word);
+              
+               // wake up all listeners
+               listener.wakeAll();
+
+               speakerNum--;
+               
+               lock.release();
+
+               Machine.interrupt().restore(preStatus);
+        }
+       ```
+
+     - listen()
+
+       ```java
+       public int listen() {
+
+               boolean preStatus = Machine.interrupt().disable();
+
+               lock.acquire();
+               // increase the number of listener by one
+               listenerNum++;
+               while (words.isEmpty()) {
+                   speaker.wakeAll();
+                   listener.sleep();
+               }
+               // listener receives the word
+               int word = words.removeFirst();
+        
+               // decrease listener number
+               listenerNum--;
+
+               lock.release();
+               
+               Machine.interrupt().restore(preStatus);
+               
+               // return words.removeLast();
+       	    return word;
+           }
+       ```
+
+     - Speaker 自定义类
+
+       ```java
+       private static class Speaker implements Runnable {
+
+               private Communicator c;
+               private int base = 0; //基量－用来区分不同的歌者
+               
+               Speaker (Communicator c, int base) {
+                   this.c = c;
+                   this.base = base;
+               }
+               
+               public void run() {
+                   for (int i = base; i < 5+base; ++i) {
+                       c.speak(i);
+                       System.out.println(KThread.currentThread().getName() + " spoken,    word = " + i);
+         
+                   }
+               }
+           }
+       ```
+
+     - Listener　自定义类
+
+       ```java
+       private static class Listener implements Runnable {
+               Listener(Communicator c) {
+                   this.c = c;
+               }
+               public void run() {
+                   for (int i = 0; i < 10; ++i) {
+                       int word = c.listen();
+                       System.out.println(KThread.currentThread().getName() + " listened, word = " + word);
+                   }
+               }
+               private Communicator c;
+           }
+       ```
+
+       ​
+
+     - 测试selfTest()
+
+       ```java
+       public static void selfTest() {
+               System.out.println("Communicator-selfTest-begin");
+               
+               Communicator c = new Communicator();
+              
+               // fork a new thread to speak
+               KThread speaker1 = new KThread(new Speaker(c, 0));
+               speaker1.setName("Speaker1").fork();
+               // KThread.yield();
+               KThread speaker2 = new KThread(new Speaker(c, 100));
+               speaker2.setName("Speaker2").fork();
+               // KThread.yield();
+               KThread listener1 = new KThread(new Listener(c));
+               listener1.setName("listener1").fork();
+             
+               // KThread.yield();
+               listener1.join();
+               speaker1.join();
+               speaker2.join();
+             
+               System.out.println("Communicator-selfTest-finished");
+           }
+       ```
+
+       ​
+
    - 测试结果
 
-     - 一个听者两个歌者
+     - 一个听者两个歌者(base = 0 | base = 100)
 
      ![](proj1.4.1.png)
 
@@ -588,37 +727,243 @@ edit - 10.11
 
    - Implement priority scheduling in Nachos by completing the PriorityScheduler class. 
      - Priority scheduling is a key building block in real-time systems.
+
      - Note that in order to use your priority scheduler, you will need to change a line in nachos.conf  that specifies the scheduler class to use. The ThreadedKernel.scheduler  key is initially equal to achos.threads.RoundRobinScheduler. You need to change this to nachos.threads.PriorityScheduler  when you're ready to run Nachos with priority scheduling.
+
      - Note that all scheduler classes extend the abstract class `nachos.threads.Scheduler`.
+
      - You must implement the methods `getPriority()`, `getEffectivePriority()`, and `setPriority()`. 
+
      - You may optionally also implement `increasePriority()` and `decreasePriority()` (these are not required).
+
      - In choosing which thread to dequeue, the scheduler should always choose a thread of the highest effective priority. If multiple threads with the same highest priority are waiting, the scheduler should choose the one that has been waiting in the queue the longest.
+
+       在选择哪个线程出队时，调度器应该总是选择一个最高有效优先级的线程。 如果具有相同最高优先级的多个线程正在等待，那么调度器应该选择在队列中最长等待的那个线程。
    - An issue with priority scheduling is *priority inversion*.
      -  If a high priority thread needs to wait for a low priority thread (for instance, for a lock held by a low priority thread), and another high priority thread is on the ready list, then the high priority thread will never get the CPU because the low priority thread will not get any CPU time.
+
+        如果高优先级线程需要等待低优先级线程（例如，对于低优先级线程所持有的锁），并且另一个高优先级线程在就绪列表中，则高优先级线程将永远不会获得CPU，因为 低优先级的线程将不会获得任何CPU时间。
+
      -  A partial fix for this problem is to have the waiting thread *donate* its priority to the low priority thread while it is holding the lock.
+
+        这个问题的一个部分解决方案是让等待线程在持有锁的同时将其优先级捐赠给低优先级线程。
+
      -  Implement the priority scheduler so that it donates priority, where possible. Be sure to implement `Scheduler.getEffectivePriority()`, which returns the priority of a thread after taking into account all the donations it is receiving.
+
+        实施优先级调度程序，以便在可能的情况下提供优先级。 一定要实现`Scheduler.getEffectivePriority()`，它在考虑了所有正在接收的捐赠之后返回一个线程的优先级。
+
      -  Note that while solving the priority donation problem, you will find a point where you can easily calculate the effective priority for a thread, but this calculation takes a long time. To receive full credit for the design aspect of this project, you need to speed this up by caching the effective priority and only recalculating a thread's effective priority when it is possible for it to change.
+
+        请注意，在解决优先捐赠问题的同时，您会发现一个点，您可以轻松计算线程的有效优先级，但是这个计算需要很长时间。 要获得本项目设计方面的全部分数，您需要通过缓存有效优先级来加快速度，只有在有可能更改时才重新计算线程的有效优先级。
+
      -  It is important that you do not break the abstraction barriers while doing this part -- the Lock class does not need to be modified. Priority donation should be accomplished by creating a subclass of ThreadQueue that will accomplish priority donation when used with the existing Lock class, and still work correctly when used with the existing Semaphore and Condition classes. Priority should also be donated through thread joins.
 
-   Priority Donation Implementation Details:
-   1) A thread's effective priority is calculated by taking the max of the donor's and the recipient's priority. If thread A with priority 4 donates to thread B with priority 2, then thread B's effective priority is now 4. Note that thread A's priority is also still 4. A thread that donates priority to another thread does not lose any of its own priority. For these reasons, the term "priority inheritance" is in many ways a more appropriate name than the term "priority donation".
-   2) Priority donation is transitive. If thread A donates to thread B and then thread B donates to thread C, thread B will be donating its new effective priority (which it received from thread A) to thread C.
+        在做这部分时，不要打破抽象障碍是很重要的，Lock类不需要修改。 优先级捐赠应该通过创建一个ThreadQueue的子类来完成，当与现有的Lock类一起使用时，它将完成优先捐赠，并且在与现有的Semaphore和Condition类一起使用时仍然可以正常工作。 优先级也应该通过线程连接来提供。
 
-<<<<<<< HEAD
+   > Priority Donation Implementation Details:
+   >
+   > 1) A thread's effective priority is calculated by taking the max of the donor's and the recipient's priority. If thread A with priority 4 donates to thread B with priority 2, then thread B's effective priority is now 4. Note that thread A's priority is also still 4. A thread that donates priority to another thread does not lose any of its own priority. For these reasons, the term "priority inheritance" is in many ways a more appropriate name than the term "priority donation".
+   >
+   > 2) Priority donation is transitive. If thread A donates to thread B and then thread B donates to thread C, thread B will be donating its new effective priority (which it received from thread A) to thread C.
+   >
+   > 优先捐赠实施细节：
+   >
+   > 1）一个线程的有效优先级是根据捐助者的最大值和接收者的优先级来计算的。 如果优先级为4的线程A向优先级为2的线程B进行捐赠，则线程B的有效优先级为4.请注意，线程A的优先级依然为4.向另一个线程赋予优先级的线程不会失去任何优先级。 由于这些原因，“优先继承”这个词在很多方面比“优先捐赠”这个词更加合适2）优先捐赠是传递性的。 如果线程A捐赠给线程B，然后线程B捐赠给线程C，则线程B将向线程C捐赠其新的有效优先级(从线程A收到的）。
+
+   - 题目分析
+
+     - 为解决优先级反转问题，需要实现一种＂捐赠＂优先级机制(Priority Donation, 说是Priority Inheritance更合适).
+     - `getEffectivePriority()`就是为了解决 *priority inversion* 设置的，也就是说当出现一个优先级高的线程等待低优先级线程时，若存在另外的高优先级线程而导致低优先级线程永远不能执行的情况，该低优先级线程调用该函数返回它持有的锁上等待的所有线程中优先级中最高的一个赋给该低优先级,　以确保它执行．
+     - `PriorityThreadQueue`类继承自`ThreadQueue`类，作用是按照优先级给线程排序
+     - 定义`ThreadState`类, 它存储一个线程的优先级，有效优先级，等待时间和等待队列．并提供计算有效优先级的方法．
+
+   - 方法及代码
+
+     修改`PriorityScheduler.java`
+
+     - 变量定义
+
+       ```java
+       //　定义默认优先级，优先级下限和优先级上限
+       public static final int priorityDefault = 1;
+       public static final int priorityMinimum = 0;
+       public static final int priorityMaximum = 7; 
+       ```
+
+     - 内部类 - `ThreadState`
+
+       - 变量定义
+
+         ```java
+         // ThreadState 所代表(或者说，关联)的线程  
+         protected KThread thread;
+         // 关联线程的优先级
+         protected int priority = priorityDefault;
+         // 关联线程的有效优先级
+         protected int effectivePriority;
+         // 关联线程的等待时间
+         public long age = Machine.timer().getTime();
+         // 一个PriorityThreadQueue链表
+         protected LinkedList<PriorityThreadQueue> Pricue;
+         // 关联线程的等待队列
+         protected PriorityThreadQueue waiting;
+         ```
+
+       - `calcEffectivePriority()`
+
+         ```java
+         public void calcEffectivePriority() {
+             // 记录该线程初始优先级
+         	int initialPriority = this.getPriority();
+         	int maxEP = -1;
+         	if (Pricue.size() != 0){
+         		int size = Pricue.size();
+         		for(int i = 0; i < size; i++){
+         			PriorityThreadQueue current = Pricue.get(i);
+         			ThreadState donor = current.pickNextThread();
+         			if (donor != null){
+         				if ((donor.getEffectivePriority() > maxEP) && current.transferPriority)
+         					maxEP = donor.getEffectivePriority();
+         			}
+         		}
+         	}
+         	if (initialPriority > maxEP){
+         		maxEP = initialPriority;
+         	}
+         	this.effectivePriority = maxEP;
+         	
+         	if (this.waiting != null && this.waiting.dequeuedThread != null){
+         		if (this.effectivePriority != this.waiting.dequeuedThread.effectivePriority){
+         				this.waiting.dequeuedThread.calcEffectivePriority();
+         		}
+         	};
+         			
+         }
+         ```
+
+       - `setPriority()`
+
+         ```java
+         public void setPriority(int priority) {
+             if (this.priority == priority)
+               return;
+             this.priority = priority;
+             //　计算有效优先级
+             this.calcEffectivePriority();
+           　// 
+             if(this.waiting != null && this.waiting.dequeuedThread != null)
+               this.waiting.dequeuedThread.calcEffectivePriority();
+         }
+         ```
+
+       - `waitForAccess()`
+
+         ```java
+         public void waitForAccess(PriorityThreadQueue waitQueue) {
+             Lib.assertTrue(Machine.interrupt().disabled());
+             long time = Machine.timer().getTime();
+             this.age = time;
+             waitQueue.priorityQueue.add(this);
+             this.waiting = waitQueue;
+             this.calcEffectivePriority();
+         }
+         ```
+
+       - `acquire()`
+
+     - 内部类 - `PriorityThreadQueue`
+
+       <!--*为避免和 `java` 的优先级队列混淆，更改内部类名字为 `PriorityThreadQueue`*-->
+
+       - 作用：按线程的优先级排序
+
+
+       - 变量定义
+
+         ```java
+         public boolean transferPriority; //是否进行优先级传递
+         protected PriorityQueue<ThreadState> priorityQueue; //利用优先级队列进行排序
+         protected ThreadState dequeuedThread = null;　//出列的线程
+         ```
+
+       - `acquire(KThread thread)`
+
+         > <!--Notify this thread queue that a thread has received access, without going through `request()` and `nextThread()`. For example, if a thread acquires a lock that no other threads are waiting for, it should call this method.-->
+         >
+         > <!--This method should not be called for a thread returned from `nextThread()`.-->
+
+       - `nextThread()`
+
+         ><!-- Notify this thread queue that another thread can receive access. Choose and return the next thread to receive access, or `null` if there are no threads waiting.-->
+         >
+         >返回下一个线程．
+         >
+         ><!--If the limited access object transfers priority, and if there are other threads waiting for access, then they will donate priority to the returned thread.-->
+         >
+         >如果进行优先级传递，而且有其他线程等待，捐赠优先级给返回的线程．
+
+       - `pickNextThread()`
+
+         >  <!--Return the next thread that `nextThread()` would return, without modifying the state of this queue.-->
+         >
+         > 返回下一个线程，不改变当前线程的状态
+
+       - `waitForAccess(KThread thread)`
+
+         > <!--Notify this thread queue that the specified thread is waiting for access. This method should only be called if the thread cannot immediately obtain access (e.g. if the thread wants to acquire a lock but another thread already holds the lock).-->
+         >
+         > 通知线程队列(this) 有一个线程(参数)等待执行. 这个方法只有线程不能立刻获得执行机会的时候调用(比如，如果一个线程申请一个其他线程正在使用的锁)．
+         >
+         > <!--A thread must not simultaneously wait for access to multiple resources. For example, a thread waiting for a lock must not also be waiting to run on the processor; if a thread is waiting for a lock it should be sleeping.-->
+         >
+         > 一个线程不能同时等待多个资源．比如，一个线程呢个不能同时既等待锁又等待在处理器上运行．如果一个线程在等待锁，它应该睡眠．
+         >
+         > <!--However, depending on the specific objects, it may be acceptable for a thread to wait for access to one object while having access to another. For example, a thread may attempt to acquire a lock while holding another lock. Note, though, that the processor cannot be held while waiting for access to anything else.-->
+         >
+         > 允许一个线程等待一个锁的同时拥有另一个锁．但是处理器不允许这样．
+
+       - `print()`
+
+         > <!--Print out all the threads waiting for access, in no particular order.-->
+         >
+         > 打印所有 waiting for access 的线程
+
+       - implement `nextThread()`
+
+         ```java
+         public KThread nextThread() {
+             Lib.assertTrue(Machine.interrupt().disabled());
+             // 调用pickNextThread()选出下一个线程
+             ThreadState threadState = this.pickNextThread();
+             if (threadState != null) {
+               //System.out.println(threadState.thread.toString());
+               //System.out.println(threadState.age);
+             }
+             //　删掉priorityQueue中选出的这个线程
+             priorityQueue.remove(threadState);
+             if (transferPriority && threadState != null) {
+               this.dequeuedThread.removeQueue(this);
+               threadState.waiting = null;
+               threadState.addQueue(this);
+             }
+             this.dequeuedThread = threadState;
+             if (threadState == null) {
+               this.priorityQueue = new PriorityQueue<ThreadState>();
+               return null;
+             }
+             return threadState.thread;
+         }
+         ```
+
+       - implement `picknextThread()`
+
+     - ​
+
+   - 测试结果
+
+
 6.  划船
 
-
-## proj2 
-
-1. ​
-
-  ```c++
-  #include<cstdio>
-  ```
-
-  ​
-
-  =======
 
 ## proj2
 
@@ -672,5 +1017,3 @@ this.openFiles[1] = UserKernel.console.openForWriting();
 this.pid = processesCreated++;
 this.childrenCreated = new HashSet<Integer>();
 ```
->>>>>>> 4262d80e4401835e0490bcc4e419f680b289b74e
-
