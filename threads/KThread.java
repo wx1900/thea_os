@@ -282,7 +282,7 @@ public class KThread {
         Lib.assertTrue(this != currentThread);
         boolean intStatus = Machine.interrupt().disable();
         if(this.joinQueue == null) {
-            this.joinQueue = ThreadedKernel.scheduler.newThreadQueue(false);
+            this.joinQueue = ThreadedKernel.scheduler.newThreadQueue(true);
             this.joinQueue.acquire(this);
         }
         if(currentThread != this && status != statusFinished) {
@@ -419,10 +419,9 @@ public class KThread {
         // new KThread(new PingTest(1)).setName("forked thread").fork();
         // new PingTest(0).run();
 
-        testJoin1();
+        // testJoin1(); // test for join
         // testJoin2(); // failed
-        // testYB();    // ignore this
-        // testPS();    // ignore this
+        testPS();    // test for PriorityScheduler change join() newThreadState(false) to true !!!
     }
 
     public static void testJoin1() {
@@ -432,42 +431,37 @@ public class KThread {
         t.join();
         new PingTest(0).run();
     }
-/**
-    public static void testYB(){
-        KThread a = new KThread(new PingTest(1)).setName("a");
-        KThread b = new KThread(new Runnable(){
-            public void run(){
-                System.out.println("a, yield  once, back to ready queue, run b");
-                a.join();
-                for (int i = 0;i <5;i++){
-                    System.out.println("b"+i+"running");
-                }
-            }
-        });
-        b.fork();
-        a.fork();
-        b.join();
-        new PingTest(0).run();
-    }
-*/
-/**
-    public static void testPS(){
+
+    public static void testPS(){  
         boolean intStatus = Machine.interrupt().disable();
         System.out.println("PriorityScheduler-selftest-begin");
         KThread t1 = new KThread(new PingTest(1)).setName("t1");
         KThread t2 = new KThread(new PingTest(2)).setName("t2");
-        KThread t3 = new KThread(new PingTest(3)).setName("t3");
+        // KThread t3 = new KThread(new PingTest(3)).setName("t3");
         new PriorityScheduler().setPriority(t1,2);
         new PriorityScheduler().setPriority(t2,4);
+        KThread t3 = new KThread(new Runnable(){
+            public void run(){
+                for (int i = 0; i < 5; i++) {
+                    if(i == 2) {
+                        t2.join();
+                    }                        
+                    System.out.println("^_^ thread 3 looped "
+                               + i + " times");
+                    KThread.currentThread().yield();
+                }
+            }
+        }).setName("t3");
         new PriorityScheduler().setPriority(t3,6);
         t1.fork();
         t2.fork();
         t3.fork();
-        new PingTest(0).run();
+        currentThread.yield();
         System.out.println("PriorityScheduler-selftest-finished");
         Machine.interrupt().restore(intStatus);
     }
-    */
+    
+
 // this not working actually
     // public static void testJoin2() {
     //     Lib.debug(dbgThread, "Enter KThread.selfTest2");
@@ -536,4 +530,6 @@ public class KThread {
 
     // add a joinqueue
     private static ThreadQueue joinQueue = null;
+
+    private static int dum = 100;
 }

@@ -795,171 +795,263 @@ edit - 10.11
        - 变量定义
 
          ```java
-         // ThreadState 所代表(或者说，关联)的线程  
+         // 与该对象关联的线程
          protected KThread thread;
-         // 关联线程的优先级
-         protected int priority = priorityDefault;
-         // 关联线程的有效优先级
-         protected int effectivePriority;
-         // 关联线程的等待时间
-         public long age = Machine.timer().getTime();
-         // 一个PriorityThreadQueue链表
-         protected LinkedList<PriorityThreadQueue> Pricue;
-         // 关联线程的等待队列
-         protected PriorityThreadQueue waiting;
-         ```
-
-       - `calcEffectivePriority()`
-
-         ```java
-         public void calcEffectivePriority() {
-             // 记录该线程初始优先级
-         	int initialPriority = this.getPriority();
-         	int maxEP = -1;
-         	if (Pricue.size() != 0){
-         		int size = Pricue.size();
-         		for(int i = 0; i < size; i++){
-         			PriorityThreadQueue current = Pricue.get(i);
-         			ThreadState donor = current.pickNextThread();
-         			if (donor != null){
-         				if ((donor.getEffectivePriority() > maxEP) && current.transferPriority)
-         					maxEP = donor.getEffectivePriority();
-         			}
-         		}
-         	}
-         	if (initialPriority > maxEP){
-         		maxEP = initialPriority;
-         	}
-         	this.effectivePriority = maxEP;
-         	
-         	if (this.waiting != null && this.waiting.dequeuedThread != null){
-         		if (this.effectivePriority != this.waiting.dequeuedThread.effectivePriority){
-         				this.waiting.dequeuedThread.calcEffectivePriority();
-         		}
-         	};
-         			
-         }
-         ```
-
-       - `setPriority()`
-
-         ```java
-         public void setPriority(int priority) {
-             if (this.priority == priority)
-               return;
-             this.priority = priority;
-             //　计算有效优先级
-             this.calcEffectivePriority();
-           　// 
-             if(this.waiting != null && this.waiting.dequeuedThread != null)
-               this.waiting.dequeuedThread.calcEffectivePriority();
-         }
+         //　线程的优先级
+         protected int priority;
+         //　线程的有效优先级
+         protected EffectivePriorityDesc effectivePriority = new EffectivePriorityDesc(0);
+         // 该线程需要等待的线程(只有parents先执行完，该线程才能执行)
+         protected HashSet<PriorityQueue> parents = new HashSet<PriorityQueue>();
          ```
 
        - `waitForAccess()`
 
          ```java
-         public void waitForAccess(PriorityThreadQueue waitQueue) {
-             Lib.assertTrue(Machine.interrupt().disabled());
-             long time = Machine.timer().getTime();
-             this.age = time;
-             waitQueue.priorityQueue.add(this);
-             this.waiting = waitQueue;
-             this.calcEffectivePriority();
+         // 当前线程需要访问被waitQueue拥有的资源 
+         public void waitForAccess(PriorityQueue waitQueue) {
+              parents.add(waitQueue);
          }
          ```
 
        - `acquire()`
 
-     - 内部类 - `PriorityThreadQueue`
-
-       <!--*为避免和 `java` 的优先级队列混淆，更改内部类名字为 `PriorityThreadQueue`*-->
-
-       - 作用：按线程的优先级排序
-
-
-       - 变量定义
-
          ```java
-         public boolean transferPriority; //是否进行优先级传递
-         protected PriorityQueue<ThreadState> priorityQueue; //利用优先级队列进行排序
-         protected ThreadState dequeuedThread = null;　//出列的线程
-         ```
-
-       - `acquire(KThread thread)`
-
-         > <!--Notify this thread queue that a thread has received access, without going through `request()` and `nextThread()`. For example, if a thread acquires a lock that no other threads are waiting for, it should call this method.-->
-         >
-         > <!--This method should not be called for a thread returned from `nextThread()`.-->
-
-       - `nextThread()`
-
-         ><!-- Notify this thread queue that another thread can receive access. Choose and return the next thread to receive access, or `null` if there are no threads waiting.-->
-         >
-         >返回下一个线程．
-         >
-         ><!--If the limited access object transfers priority, and if there are other threads waiting for access, then they will donate priority to the returned thread.-->
-         >
-         >如果进行优先级传递，而且有其他线程等待，捐赠优先级给返回的线程．
-
-       - `pickNextThread()`
-
-         >  <!--Return the next thread that `nextThread()` would return, without modifying the state of this queue.-->
-         >
-         > 返回下一个线程，不改变当前线程的状态
-
-       - `waitForAccess(KThread thread)`
-
-         > <!--Notify this thread queue that the specified thread is waiting for access. This method should only be called if the thread cannot immediately obtain access (e.g. if the thread wants to acquire a lock but another thread already holds the lock).-->
-         >
-         > 通知线程队列(this) 有一个线程(参数)等待执行. 这个方法只有线程不能立刻获得执行机会的时候调用(比如，如果一个线程申请一个其他线程正在使用的锁)．
-         >
-         > <!--A thread must not simultaneously wait for access to multiple resources. For example, a thread waiting for a lock must not also be waiting to run on the processor; if a thread is waiting for a lock it should be sleeping.-->
-         >
-         > 一个线程不能同时等待多个资源．比如，一个线程呢个不能同时既等待锁又等待在处理器上运行．如果一个线程在等待锁，它应该睡眠．
-         >
-         > <!--However, depending on the specific objects, it may be acceptable for a thread to wait for access to one object while having access to another. For example, a thread may attempt to acquire a lock while holding another lock. Note, though, that the processor cannot be held while waiting for access to anything else.-->
-         >
-         > 允许一个线程等待一个锁的同时拥有另一个锁．但是处理器不允许这样．
-
-       - `print()`
-
-         > <!--Print out all the threads waiting for access, in no particular order.-->
-         >
-         > 打印所有 waiting for access 的线程
-
-       - implement `nextThread()`
-
-         ```java
-         public KThread nextThread() {
-             Lib.assertTrue(Machine.interrupt().disabled());
-             // 调用pickNextThread()选出下一个线程
-             ThreadState threadState = this.pickNextThread();
-             if (threadState != null) {
-               //System.out.println(threadState.thread.toString());
-               //System.out.println(threadState.age);
-             }
-             //　删掉priorityQueue中选出的这个线程
-             priorityQueue.remove(threadState);
-             if (transferPriority && threadState != null) {
-               this.dequeuedThread.removeQueue(this);
-               threadState.waiting = null;
-               threadState.addQueue(this);
-             }
-             this.dequeuedThread = threadState;
-             if (threadState == null) {
-               this.priorityQueue = new PriorityQueue<ThreadState>();
-               return null;
-             }
-             return threadState.thread;
+         // 当等待队列里的线程被申请时，从等待队列中移除
+         public void acquire(PriorityQueue waitQueue) {
+          	parents.remove(waitQueue);
          }
          ```
 
-       - implement `picknextThread()`
 
-     - ​
+       - `donatePriority()`
 
-   - 测试结果
+         ```java
+          public void donatePriority(DonationController q, int donation) {
+          	effectivePriority.donate(q, donation);
+             notifyParents();
+             System.out.println("Donated to: " + thread + " with donation " + donation);
+          }
+         ```
+
+         ​
+
+       - `retractDonatePriority()`
+
+         ```java
+         public void retractDonatedPriority(DonationController q) {         			    effectivePriority.retract(q);
+            notifyParents();
+          }
+         ```
+
+         ​
+
+       - (内部类`ThreadState`的)内部类`EffectivePriorityDesc`
+
+         - 存储捐赠者和计算最大捐赠值, 执行捐赠
+
+         - 变量定义
+
+           ```java
+           protected int priority, max_donation; // 优先级，最大捐献值
+           protected HashMap<PriorityScheduler.DonationController, Integer> donations = new HashMap<DonationController, Integer>();　// 捐献者
+           ```
+
+         - `donate()`
+
+           ```java
+           void donate(DonationController q, int priority) {
+                this.donations.put(q, priority);
+                max_donation = Math.max(max_donation, priority);
+           }
+           ```
+
+         - `retract()`
+
+           ```java
+           void retract(DonationController q) {
+                if(donations.containsKey(q)) {
+                    int p = donations.get(q);
+                    donations.remove(q);
+                    if(max_donation == p) {
+                        max_donation = 0;
+                        for(Map.Entry<DonationController, Integer> e : donations.entrySet()) {
+                             max_donation = Math.max(max_donation, e.getValue());
+                         }
+                     }
+                 }
+           }
+           ```
+
+       - 内部类 - `DonationController`
+
+         - 变量声明
+
+           ```java
+           // 捐赠者
+           protected ThreadState target;
+           // 最大优先级
+           protected int maximumPriority;
+           //　
+           protected java.util.PriorityQueue<PriorityQueue.ThreadWrapper> queue;
+           ```
+
+         - `setTarget()`
+
+           ```java
+           public void setTarget(ThreadState t) {
+               if(target != null)
+                    target.retractDonatedPriority(this);
+               target = t;
+               target.donatePriority(this, maximumPriority);
+           }
+           ```
+
+         - `resetMaximumPriority()`
+
+           ```java
+           public void resetMaximumPriority(ThreadState t) {
+                if(t.getEffectivePriority() == maximumPriority) {
+                      maximumPriority = priorityMinimum;
+                      for(PriorityQueue.ThreadWrapper w : queue)
+                         maximumPriority = Math.max(maximumPriority, w.state.getEffectivePriority());
+                 }
+           }
+           ```
+
+         - `transferPriority()`
+
+           ```java
+           public void transferPriority(ThreadState t) {
+                maximumPriority = Math.max(t.getEffectivePriority(), maximumPriority);
+                if(target != null && maximumPriority > target.getEffectivePriority()) {
+                     target.donatePriority(this, maximumPriority);
+                }
+            }
+           ```
+
+           ​
+
+     - 内部类`PriorityQueue`
+
+       根据优先级进行排序
+
+       - 变量定义
+
+         - ```java
+           // 是否进行优先级传递
+           public boolean transferPriority;
+           // 优先级队列排序的ThreadWrapper
+           public java.util.PriorityQueue<ThreadWrapper> queue = new java.util.PriorityQueue<ThreadWrapper>();
+           // 绑定ThreadState和ThreadWrapper
+           public HashMap<ThreadState, ThreadWrapper> threadStates = new HashMap<ThreadState, ThreadWrapper>();
+           // 执行捐赠的操作的类
+           public DonationController donationController;
+           ```
+
+         - 内部类 - `ThreadWrapper`
+
+           封装了 `ThreadState`  和  `timeInserted` 两个属性
+
+           实现 `Comparable` 接口, 可以比较大小
+
+           - 变量定义
+
+             ```java
+             public ThreadState state;
+             public long timeInserted;
+             ```
+
+           - `compareTo`
+
+             ```java
+             // 如果有效优先级一样，等待时间越长的线程越＂大＂;如果有效优先级不一样，优先级越大的线程越＂大＂
+             public int compareTo(Object o) {
+                  Lib.assertTrue(o instanceof ThreadWrapper);
+                  ThreadWrapper s = (ThreadWrapper) o;
+                  return (state.getEffectivePriority() == s.state.getEffectivePriority()) ? (int)(timeInserted - s.timeInserted) : (s.state.getEffectivePriority() - state.getEffectivePriority());
+             }
+             ```
+
+       - `waitForAccess()`
+
+         ```java
+         public void waitForAccess(KThread thread) {
+         	Lib.assertTrue(Machine.interrupt().disabled());
+             Lib.assertTrue(!threadStates.containsKey(getThreadState(thread)));
+             // 把线程添加进threadStates
+             threadStates.put(getThreadState(thread), new ThreadWrapper(getThreadState(thread)));
+             //　把线程添加进优先级队列
+         	queue.add(threadStates.get(getThreadState(thread)));
+         	getThreadState(thread).waitForAccess(this);
+            	if(transferPriority)
+         	    donationController.transferPriority(getThreadState(thread));
+         }
+         ```
+
+       - `acquire()`
+
+         ```java
+         public void acquire(KThread thread) {
+         	Lib.assertTrue(Machine.interrupt().disabled());
+             Lib.assertTrue(!threadStates.containsKey(getThreadState(thread)));
+             getThreadState(thread).acquire(this);
+             if(transferPriority)
+                 donationController.setTarget(getThreadState(thread));
+         }
+         ```
+
+       - `pickNextThread()`
+
+         ```java
+         // queue 是优先级队列，队列头就是优先级最大的线程(或者等待时间最长的线程)
+         protected ThreadState pickNextThread() {
+             return queue.peek().state;
+         }
+         ```
+
+   - 测试及结果
+
+     - 测试代码
+
+       ```java
+       public static void testPS(){  
+               boolean intStatus = Machine.interrupt().disable();
+               System.out.println("PriorityScheduler-selftest-begin");
+               KThread t1 = new KThread(new PingTest(1)).setName("t1");
+               KThread t2 = new KThread(new PingTest(2)).setName("t2");
+               // 设置线程t1的优先级为２，线程t2的优先级为４
+         		new PriorityScheduler().setPriority(t1,2);
+               new PriorityScheduler().setPriority(t2,4);
+               KThread t3 = new KThread(new Runnable(){
+                   public void run(){
+                       for (int i = 0; i < 5; i++) {
+                           if(i == 2) {
+                               t2.join();
+                           }                        
+                           System.out.println("^_^ thread 3 looped "
+                                      + i + " times");
+                           KThread.currentThread().yield();
+                       }
+                   }
+               }).setName("t3");
+         　　　// 线程t3 需要等t2执行完才能全部执行完，设置t3的优先级为６
+         　　　// t3 的优先级比t2大，出现priority inversion,需要进行优先级捐赠(继承)
+               new PriorityScheduler().setPriority(t3,6);
+               t1.fork();
+               t2.fork();
+               t3.fork();
+               currentThread.yield();
+               System.out.println("PriorityScheduler-selftest-finished");
+               Machine.interrupt().restore(intStatus);
+           }
+       ```
+
+     - 测试结果
+
+       测试结果显示，t3把优先级传递给了t2
+
+     ![](proj1.5.png)
 
 
 6.  划船
