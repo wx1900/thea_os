@@ -32,6 +32,8 @@ public class UserProcess {
 		// define the first two openfiles 
 		openfile[0] = UserKernel.console.openForReading();
 		openfile[1] = UserKernel.console.openForWriting();
+		// proj2.3
+		System.out.println("Create a new UserProcess pid = " + pid);
 	}
 
 	/**
@@ -471,7 +473,7 @@ public class UserProcess {
 				return handleCreate(a0);
 				
 			case syscallExit:
-				System.out.println("Handle Exit");
+				// System.out.println("Handle Exit");
 				/** the file argument is filename, hence a0 */
 				return handleExit(a0);
 				
@@ -487,7 +489,8 @@ public class UserProcess {
 				return handleOpen(a0);
 				
 			case syscallRead:
-				// System.out.println("syscallRead"); 轮循，不停执行 syscallRead
+				// System.out.println("syscallRead"); 
+				// keep execute syscallRead, read bytes from input
 				/** need three argument a0:filename, a1:buf address, a2:buf size */
 				return handleRead(a0,a1,a2);
 				
@@ -570,6 +573,7 @@ public class UserProcess {
      *  The last process to call exit() should cause the machine to halt by calling Kernel.kernel.terminate()
      */
 	private int handleExit (int status) {
+		// proj2.3
 		System.out.println("\nexit -- processOn = " + processOn + " - 1");
 		/** close coff file */
         coff.close();
@@ -598,10 +602,11 @@ public class UserProcess {
 		/** unload sections */
 		unloadSections();
 
-		/** if it's root process then halt the machine */
+		/** if it's the last process then terminate the machine */
 		if (processOn == 1) {
-			System.out.println("Root process - Machine.halt()");
-			Machine.halt();
+			System.out.println("The last process - Kernel.kernel.terminate()");
+			// Machine.halt();
+			Kernel.kernel.terminate();
 		}	
 		/** decrease the running process */
 		processOn--;
@@ -663,7 +668,7 @@ public class UserProcess {
      */
 	private int handleCreate(int fileAddress) {
 		
-		String filename=readVirtualMemoryString(fileAddress,256);
+		String filename = readVirtualMemoryString(fileAddress,256);
 		// Is this fileName valid?
 		if (filename == null || filename.length() == 0) {
             System.out.println("Invalid filename for create()");
@@ -708,7 +713,7 @@ public class UserProcess {
                 // System.out.println("Create a file: "+filename);
 				// this.handleCreate(fileAddress);
 				/** shouldn't create file here */
-                return 0;
+                return -1;
             } else {
                 // Add this openFile to openFiles
                 openfile[fileDescriptor] = file;
@@ -810,7 +815,7 @@ public class UserProcess {
 		
 		if(filename == null) {
 			System.out.println("File doesn't exist, no need to unlink.");
-			return 0;
+			return -1;
 		}
 			
 		if(ThreadedKernel.fileSystem.remove(filename))

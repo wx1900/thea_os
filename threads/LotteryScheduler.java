@@ -2,9 +2,6 @@ package nachos.threads;
 
 import nachos.machine.*;
 import java.util.LinkedList;
-// import java.util.TreeSet;
-// import java.util.HashSet;
-// import java.util.Iterator;
 
 /**
  * A scheduler that chooses threads using a lottery.
@@ -173,7 +170,7 @@ public class LotteryScheduler extends Scheduler {
 				    break;
 				}
 			}
-		
+			System.out.println("allTickets = "+allTickets + " toWin = " + toWin + " winThread = "+winThread.getName());
 			if(winThread != null)
 				waitQueue.remove(threadState);
 			// if (!winThread.getName().equals("sh.coff"))
@@ -230,13 +227,18 @@ public class LotteryScheduler extends Scheduler {
 		 * that is, the owner's ticket count is the sum of its own tickets and 
 		 * the tickets of all waiters, not the max. 
 		 */
-		public int getEffectivePriority() {			
+		public int getEffectivePriority() {	
+			Lib.assertTrue(Machine.interrupt().disabled());		
 			effectivepriority = priority;
-			
+			// System.out.println("thread " + thread.getName() + " lotterQueue.waitQueue.size = " +lotteryQueue.waitQueue.size());
 			for(int i = 0; i < lotteryQueue.waitQueue.size(); i++) {
-				effectivepriority += lotteryQueue.waitQueue.get(i).getEffectivePriority();
+				int temp = lotteryQueue.waitQueue.get(i).getEffectivePriority();
+				// System.out.println("i = " + i + " thread="+ lotteryQueue.waitQueue.get(i).thread.getName() +" effectivePriority = " + temp);
+				effectivepriority = effectivepriority + temp;
+				// effectivepriority += lotteryQueue.waitQueue.get(i).getEffectivePriority();
 			}
-
+			if (priority != effectivepriority)
+			System.out.println("thread " + thread.getName() + " effectivePriority = "+effectivepriority);
 			return effectivepriority;
 		}
 
