@@ -8,11 +8,11 @@
 
 
 
-##阅读向导和源码
+## 阅读向导和源码
 
 <!--阅读源码的部分比较长，分解到各个项目中-->
 
-###1. 下载和配置
+### 1. 下载和配置
 
 - 下载 nachos java版, 解压到自定义的文件目录；
 - 下载 jdk , 采用open-jdk-1.8 ；
@@ -23,7 +23,7 @@
 
 <!--由于配置nachos失败，直接执行上述操作启动程序-->
 
-###2. Nachos 简介
+### 2. Nachos 简介
 
 - Nachos 是一个教学用的操作系统，包括一个真实的操作系统的许多方面，线程，中断系统，虚拟内存，由中断驱动的I/O，网络接口，计时器，MIPS处理器等．
 - 基于Java实现的Nachos在JVM之上，模拟了一个计算机的硬件系统包括CPU、中断控制器、定时器、网卡、内存、文件系统等. 然后模拟了一个在这些硬件之上运行的操作系统。
@@ -33,7 +33,7 @@
   - Originally created at Berkeley in 1992 in C++ By Wayne A. Christopher, Steven J. Procter, and Tomas E. Anderson
   - Rewritten in Java by Daniel Hettena.
 
-###3. Nachos 工作原理
+### 3. Nachos 工作原理
 
 - 启动过程：
 
@@ -109,9 +109,9 @@
     Kernel.kernel = nachos.userprog.UserKernel #创建用户内核
     ```
 
-###4. Nachos 重点类概述
+### 4. Nachos 重点类概述
 
-####4.1 nachos.machine.Machine
+#### 4.1 nachos.machine.Machine
 
 - 启动系统，并提供对各种硬件设备的访问
   - Machine.interrupt()
@@ -119,7 +119,7 @@
   - Machine.console()
   - Machine.networkLink()
 
-####4.2 nachos.machine.Interrupt 
+#### 4.2 nachos.machine.Interrupt 
 
 - 启动硬件中断，管理一个事件队列
 - 时钟:  一个时钟周期执行MIPS指令，10个时钟周期重新启用中断
@@ -133,7 +133,7 @@
   - enable()
   - disable()
 
-####4.3 nachos.machine.Timer
+#### 4.3 nachos.machine.Timer
 
 - 硬件设备约每 500 时钟周期引起一次中断
 - 提供抢占操作
@@ -141,7 +141,7 @@
   - getTImer() 返回经过了多少时钟周期
   - setInterruptHandler() tells the timer what to do when it goes off
 
-####4.4 nachos.machine.Serial Console
+#### 4.4 nachos.machine.Serial Console
 
 - 控制台, 读写字符
 - 包含的方法
@@ -152,7 +152,7 @@
   - StadardConsole 实现 SerialConsole 的接口
   - 利用java的System.in与System.out模拟了一个nachos控制台，模拟系统的键盘输入和文本输出
 
-####4.5 nachos.machine.Kernel
+#### 4.5 nachos.machine.Kernel
 
 - nachos.machine.Kernel 是一个抽象类，由ThreadedKernel 和 UserKernel 继承 
 - 包含的方法
@@ -161,7 +161,7 @@
   - run() 运行用户代码(proj1中没有，proj2中有)
   - terminate() 终止，不再返回
 
-####4.6 nachos.threads
+#### 4.6 nachos.threads
 
 - 所有的Nachos线程都是nachos.thread.KThread(或子类)的实例
 - KThread 有5个状态
@@ -182,7 +182,7 @@
     - KThread.tcb -> TCB.javaThread->java Thread (new Thread(new Runnable))
   - 线程的上述操作是在KThread对应的TCB中，通过java的相应操作具体实现的
 
-####4.7 nachos.userprog
+#### 4.7 nachos.userprog
 
 - 一个Kthread对象对应一个Nachos核心线程
 - 一个UserProcess对象对应一个Nachos用户进程
@@ -200,7 +200,7 @@
   - 对OpenFile, FileSystem 方法的具体实现
   - 文件的open() 是基于java的RandomAccessFile实现的，其余的read, write, close等都是基于java的File类实现的．
 
-###5. Nachos 命令行参数
+### 5. Nachos 命令行参数
 
 - -d <debug flags> 
   - enable some debug flags, e.g. -d ti
@@ -224,7 +224,7 @@
 
 
 
-##Proj1
+## Proj1
 
 <!--换一个引用-->
 
@@ -232,19 +232,19 @@
 >
 > 第一步是阅读和理解我们为你写的部分线程系统。 这个线程系统实现了线程分叉，线程完成和信号量的同步。 它还提供了基于信号量构建的锁和条件变量。
 
-###1.实现 KThread.join()
+### 1.实现 KThread.join()
 
 > (5%, 5 lines) Implement `KThread.join()`. Note that another thread does not have to call `join()`, but if it is called, it must be called only once. The result of calling `join()` a second time on the same thread is undefined, even if the second caller is a different thread than the first caller. A thread must finish executing normally whether or not it is joined.
 >
 > (5％）实现`KThread.join()`。 请注意，另一个线程不是必须调用join()，但是如果它被调用，它只能被调用一次。 即使第二个调用方是与第一个调用方不同的线程，第二个调用join() 的结果也是未定义的。 无论是否被join，一个线程都必须正常执行。
 
-####题目分析
+#### 题目分析
 
 - t.join()的作用是等待调用此方法的线程(t)执行完(Wait for this thread to die)．
 - join()函数只能被调用一次，第二次调用未定义．
 - join()结束时唤醒在等待队列中的所有线程
 
-####方法及代码
+#### 方法及代码
 
 需要修改join(), 使得当前线程加入调用线程的join队列，同时使当前线程睡眠；还需要修改finish()在线程结束后，检查join队列上是否有线程，并唤醒所有在队列上阻塞的线程。
 
@@ -471,13 +471,13 @@ public static void testJoin1() {
   ```
 
 
-####测试及结果
+#### 测试及结果
 
 ![](proj1.2.png)
 
 ​
 
-###3.实现Alarm 类
+### 3.实现Alarm 类
 
 > Complete the implementation of the `Alarm` class, by implementing the `waitUntil(long x)` method. 通过waitUntil(long x)实现Alarm类．
 >
@@ -491,13 +491,13 @@ public static void testJoin1() {
 >
 > `waitUntil` is not limited to one thread; **any number of threads** may call it and be suspended at any one time.  `waitUntil()`不受限于任何一个线程，任何线程可以调用它实现被挂起。
 
-####题目分析
+#### 题目分析
 
 - Alarm 类使用硬件定时器提供抢占，并允许线程挂起到某个时间．
 - 定时器中断处理程序被成为机器计时器定期(大约每500时钟周期).
 - 当前线程睡眠至少x时间周期，在定时器中断处理程序中将其唤醒．当现在时间(current times) >= (WaitUntil called time) + (x)时, 线程必须被唤醒（在中断产生时)．因为waitUntil()是至少x时间后唤醒，所以只需要满足睡眠时间大于x即可． 
 
-####方法及代码
+#### 方法及代码
 
 由于题目要求是至少x时间后唤醒，所以不必困扰于如何产生软中断的问题。根据参考文档(题目下列出), 借助硬件中断唤醒特定的线程。这里的硬件中断是指nachos模仿的计时器Timer, 每隔500个时钟周期引起一次中断。实现方法是创建一个等待队列，每次有线程调用waitUtil()，就把该线程加入等待队列。每次发生中断，检查队列中的线程，达到唤醒时间的，将线程加入就绪队列。这样的方法可以保证线程睡眠至少x时钟周期，因为硬件中断等原因，睡眠时间一般会比x时钟周期更长。
 
@@ -547,7 +547,7 @@ public static void testJoin1() {
    }
   ```
 
-####测试结果
+#### 测试结果
 
 ![](proj1.3.2.png)
 
@@ -562,7 +562,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 > - https://github.com/viturena/nachos/blob/master/threads/Alarm.java
 > - https://www.javatpoint.com/java-treemap
 
-###4.实现Communicator类
+### 4.实现Communicator类
 
 > 题目摘要
 >
@@ -580,13 +580,13 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 >
 > <!--歌者的翻译纯粹喜好.TB-->
 
-####题目分析
+#### 题目分析
 
 - 使用条件变量(Condition)实现信息的发送和接收
 - 信息在线程之间传递以后，返回listen() 或者 speak()
 - 对于同一个Communicator可以有多个speaker和listener．
 
-####方法及代码
+#### 方法及代码
 
 - 变量定义
 
@@ -712,7 +712,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 
   ​
 
-####测试结果
+#### 测试结果
 
 在 ThreadedKernel.selfTest() 中添加 Communicator.selfTest() 
 
@@ -726,7 +726,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 >
 > <!--比如，测试不需要发送一段信息，只需要传递数字也可以证明传递成功，在这里只需要实现原理，发送什么样的信息是不重要的-->
 
-###5.实现优先级调度
+### 5.实现优先级调度
 
 <!--Implement priority scheduling in Nachos by completing the PriorityScheduler class.Priority scheduling is a key building block in real-time systems. -->
 
@@ -760,14 +760,14 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 >
 > 1）一个线程的有效优先级是根据捐助者的最大值和接收者的优先级来计算的。 如果优先级为4的线程A向优先级为2的线程B进行捐赠，则线程B的有效优先级为4.请注意，线程A的优先级依然为4.向另一个线程赋予优先级的线程不会失去任何优先级。 由于这些原因，“优先继承”这个词在很多方面比“优先捐赠”这个词更加合适2）优先捐赠是传递性的。 如果线程A捐赠给线程B，然后线程B捐赠给线程C，则线程B将向线程C捐赠其新的有效优先级(从线程A收到的）。
 
-####题目分析
+#### 题目分析
 
 - 为解决优先级反转问题，需要实现一种＂捐赠＂优先级机制 (Priority Donation, 说是Priority Inheritance更合适).
 - `getEffectivePriority()` 就是为了解决 *priority inversion* 设置的，也就是说当出现一个优先级高的线程等待低优先级线程时，若存在另外的高优先级线程而导致低优先级线程永远不能执行的情况，该低优先级线程调用该函数返回它持有的锁上等待的所有线程中优先级中最高的一个赋给该低优先级,　以确保它执行．
 - `PriorityThreadQueue` 类继承自 `ThreadQueue` 类，作用是按照优先级给线程排序
 - 定义`ThreadState`类, 它存储一个线程的优先级，有效优先级，等待时间和等待队列．并提供计算有效优先级的方法．
 
-####方法及代码
+#### 方法及代码
 
 
 
@@ -974,7 +974,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
     }
     ```
 
-####测试及结果
+#### 测试及结果
 
 - 测试代码
 
@@ -1025,7 +1025,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 
 ![](proj1.5.png)
 
-###6. 划船 TODO
+### 6. 划船 TODO
 
 ## Proj2
 
@@ -1033,9 +1033,9 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 >- SerialConsole simulates a serial console (for keyboard input and text output).
 >- FileSystem is a file system interface. To access files, use the FileSystem returned by Machine.stubFileSystem(). This file system accesses files in the test directory.
 
-###1.实现文件系统调用
+### 1.实现文件系统调用
 
-####题目分析
+#### 题目分析
 
 - 实现文件系统的相应(create, open, read, write, close and unlink).
 - 用户所有的操作都不应该终止操作系统，除了执行 `halt()` 指令．
@@ -1045,7 +1045,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 - 你可以通过 `ThreadedKernel.fileSystem` 调用 stub filesystem .
 - 每个进程可以打开16个文件．不同的进程可以用同样的文件描述符代表不同的文件．
 
-####方法及代码
+#### 方法及代码
 
 - 部分变量
 
@@ -1268,7 +1268,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
   }
   ```
 
-####测试结果
+#### 测试结果
 
 显示文件名为abc的文件内容
 
@@ -1278,9 +1278,9 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 
 ![](proj2.1.png)
 
-###2.实现对多道程序的支持
+### 2.实现对多道程序的支持
 
-####题目分析
+#### 题目分析
 
 - 提出一种分配物理内存的方法，从而是内存不会出现重复使用.　我们保证进程不会分配和释放内存，也就是说你可以在进程创建时就直到它所需的内存．你可以分配一个固定数量的页给进程的栈，比如８页
   - 建议为物理内存维护一个全局链表．确保对这个链表进行同步化操作．这个链表可以让内存页表的分配不连续，提供有效分配．
@@ -1291,7 +1291,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
   - 这些方法不可以抛出异常，必须总是返回传递的字符长度
 - 修改 `UserProcess.loadSections()` ，使它分配它所需要的页表．
 
-####方法及代码
+#### 方法及代码
 
 - `UserKernel`
 
@@ -1457,13 +1457,13 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
     }
     ```
 
-####测试及结果
+#### 测试及结果
 
 - 无直接测试结果，程序修改后运行正常
 
-###3.实现系统调用
+### 3.实现系统调用
 
-####题目分析
+#### 题目分析
 
 - 实现系统调用( `exec`, `join` , `exit` )
 - 所有的地址传送都是虚拟地址，你需要用 `readVirtualMemory` 和 `readVirtualMemoryString` 来实现内存在 `kernel` 和进程之间的传递．
@@ -1474,7 +1474,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 - 退出进程的退出状态应该传递给父进程，以避免父进程调用 `join()` ．
 - 最后一个进程调用 `exit()` 应该调用 `Kernel.kernel.terminate()` 导致系统中止.(注意，只有根进程才可以调用 `halt()` , 但是最后一个退出的进程应该直接调用 `Kernel.kernel.terminate()`)
 
-####方法及代码
+#### 方法及代码
 
 - 相关变量描述
 
@@ -1613,7 +1613,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 
   ​
 
-####测试结果
+#### 测试结果
 
 进入 `shell` 之前，打印创建进程的信息 `Create a new UserProcess pid = 1` ,　用一个进程运行　 `sh.coff`
 
@@ -1627,16 +1627,16 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 
 ![](proj2.3.png)
 
-###4.实现彩票调度
+### 4.实现彩票调度
 
-####题目分析
+#### 题目分析
 
 - 处于等待的线程传递彩票给它在等待的线程．一个线程的彩票是它自己的彩票和所有等待它执行完的线程的彩票之和．
 - 系统中有百万张彩票，也应该可以应对．
 - `LotterScheduler.increasePriority()` 和 `LotterSchedulre.decreasePriority()` 被调用时，分别执行优先级加一和减一
 - 系统中的彩票数量最大不超过 `Integer.MAX_VALUE` , 一个线程的最大优先级也是 `Integer.MAX_VALUE` 而不是７．
 
-####方法及代码
+#### 方法及代码
 
 处于等待的线程将彩票传递给它在等待的线程，也就是，如果线程A拥有彩票20，线程B拥有彩票12，线程A需要等待线程B执行。那么线程B的彩票就是线程A的彩票和线程B的彩票的和32。
 
@@ -1722,7 +1722,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
     }
     ```
 
-####测试与结果
+#### 测试与结果
 
 - 测试代码
 
@@ -1775,7 +1775,7 @@ timerInterrupt 约每隔500个时钟周期产生一次，多出来的时间可�
 
 ## 总结
 
-###课设成果总结
+### 课设成果总结
 
 这次课程设是完善nachos操作系统，完成 proj1 和 proj2.
 
