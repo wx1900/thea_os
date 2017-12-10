@@ -324,19 +324,19 @@ public static void testJoin1() {
 
 > 参考：操作系统PPT
 
-###2.实现条件变量
+### 2.实现条件变量
 
 >  (5%, 20 lines) Implement condition variables directly, by using interrupt enable and disable to provide atomicity. We have provided a sample implementation that uses semaphores; your job is to provide an equivalent implementation without directly using semaphores (you may of course still use locks, even though they indirectly use semaphores). Once you are done, you will have two alternative implementations that provide the exact same functionality. Your second implementation of condition variables must reside in class `nachos.threads.Condition2`.
 >
 >  (5%)直接实现条件变量，通过使用中断启用和禁用来提供原子性。 我们提供了一个使用信号量的示例实现; 你的工作是提供一个没有直接使用信号量的等价的实现（你当然可以使用锁，即使它们间接使用信号量）。 一旦你完成了，你将有两个可供选择的实现提供完全相同的功能。 条件变量的第二个实现必须驻留在类nachos.threads.Condition2中。
 
-####题目分析
+#### 题目分析
 
 - 条件变量(Condition) 为一个线程暂停执行提供了一种方法，直到直到另一个线程通知现在某些状态条件成立为止．
 - 由于对共享状态信息的访问发生在不同的线程中，因此必须对其进行保护，以便某种形式的锁与条件相关联．
 - 它会自动释放关联的锁并暂停当前线程．
 
-####方法及代码
+#### 方法及代码
 
 - 变量声明
 
