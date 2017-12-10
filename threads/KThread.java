@@ -419,10 +419,11 @@ public class KThread {
         // new KThread(new PingTest(1)).setName("forked thread").fork();
         // new PingTest(0).run();
 
-        // testJoin1(); // test for join
-        // testJoin2(); // failed
-        // testPS();    // test for PriorityScheduler change join() newThreadState(false) to true !!!
-        testLS(); // test for LotteryScheduler
+        // testJoin1(); // test for join  -- proj 1 task 1
+        // testPS();    // test for PriorityScheduler change join() newThreadState(false) to true !!!  -- proj 1 task 5
+        // testLS();    // test for LotteryScheduler  -- proj 2 task 5s
+
+        // testJoin2(); // failed -- ignore this
     }
 
     public static void testJoin1() {

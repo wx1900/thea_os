@@ -50,20 +50,28 @@ public class ThreadedKernel extends Kernel {
      * tests here.
      */
     public void selfTest() {
-        KThread.selfTest();
+        System.out.println("\nFor test details, please read README.\n");
+        /**  Proj 1 Task 1 
+         * & Proj 1 Task 5 
+         * & Proj 2 Task 5 
+         */
+        // KThread.selfTest();
+
         // Semaphore.selfTest();
         // SynchList.selfTest();
-        // Condition2.selfTest(); /**task 2 condition2*/
-        /**task 3 alarm*/
-        /*alarmTest(1);
-        alarmTest(100);
-        alarmTest(500);
-        alarmTest(10000);
-        */
-        /**task 4 communicator*/
+        
+        /** Proj1 Task 2 condition2*/
+        // Condition2.selfTest();
+        
+        /** Proj 1 task 3 alarm*/
+        // alarmTest(1);
+        // alarmTest(100);
+        // alarmTest(500);
+        // alarmTest(10000);
+    
+        /** Proj 1 task 4 communicator*/
         // Communicator.selfTest();
-        /**task 5 priorityscheduler */
-        // PriorityScheduler.testPS();
+        
         if (Machine.bank() != null) {
             ElevatorBank.selfTest();
         }
